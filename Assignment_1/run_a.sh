@@ -1,0 +1,1 @@
+python linear.py a data/train.csv data/test.csv outputfile_a.txt weightfile_a.txt
