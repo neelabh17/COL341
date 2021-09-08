@@ -18,8 +18,31 @@ def mode_a(args):
 
 
     W = np.matmul(np.linalg.inv(np.matmul(X.T, X)), np.matmul(X.T, Y))
+    test_data = pd.read_csv(test_file_name)
+    test_data.drop("Unnamed: 0", inplace = True, axis = 1)
+    X_test = test_data
+    dummy = [1 for _ in range(test_data.shape[0])]
+    X_test["dummy"] = dummy
+    X_test = X_test.to_numpy()
+    Y_test = np.matmul(X_test, W)
 
-    import pdb; pdb.set_trace()
+    with open(output_file_name, "w") as f:
+        for y in Y_test:
+            f.write(str(y))
+            f.write("\n")
+    with open(weight_file_name, "w") as f:
+        f.write(str(W[-1]))
+        f.write("\n")
+        for w in W[:-1]:
+            f.write(str(w))
+            f.write("\n")
+
+
+
+    # import pdb; pdb.set_trace()
+
+
+
 
 
 
