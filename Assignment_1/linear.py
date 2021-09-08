@@ -51,7 +51,7 @@ def mode_b(args):
     train_file_name, test_file_name, reg_file, output_file_name, weight_file_name, best_param_file = args[2:] 
     #TODO will the whole files be paseed like we did in java
     # print(train_file_name, test_file_name, output_file_name, weight_file_name) 
-    lambdas = list(map(lambda x: float(x.strip("\n")),open(reg_file, "r").readlines()))
+    lambdas = np.genfromtxt(reg_file, delimiter = ",")
     print(lambdas)
 
     train_data = pd.read_csv(train_file_name)
