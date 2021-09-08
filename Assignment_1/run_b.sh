@@ -1,0 +1,1 @@
+python3 linear.py b data/train.csv data/test.csv regularization.txt outputfile_b.txt weightfile_b.txt bestparameter.txt
