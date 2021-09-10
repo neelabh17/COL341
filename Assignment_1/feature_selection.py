@@ -11,6 +11,7 @@ for a,b in class_num_dict_tmp:
 def transforms(X, Y, trans, reg, enc, do_reg = False, df_x = None, df_y = None):
     # polynimial fitting
     X = trans.fit_transform(X)
+    # import pdb; pdb.set_trace()
     
 
 
@@ -26,13 +27,12 @@ def transforms(X, Y, trans, reg, enc, do_reg = False, df_x = None, df_y = None):
 
 
     # one hot encoding
-    list_to_encode = ["Patient Disposition", "Age Group", "Payment Typology 1", "Payment Typology 2", "Payment Typology 3"]
-    # for cls_name in tqdm(enc):
-    for cls_name in list_to_encode:
-        # print("\nOne hoting for ", cls_name)
-        one_hot = enc[cls_name].transform(df_x[cls_name].to_numpy().reshape(-1,1)).toarray()
-        # import pdb; pdb.set_trace()
-        X = np.concatenate((X, one_hot ), axis = 1)
+    # list_to_encode = ["Patient Disposition", "Age Group", "Payment Typology 1", "Payment Typology 2", "Payment Typology 3"]
+    # # for cls_name in tqdm(enc):
+    # for cls_name in list_to_encode:
+    #     # print("\nOne hoting for ", cls_name)
+    #     one_hot = enc[cls_name].transform(df_x[cls_name].to_numpy().reshape(-1,1)).toarray()
+    #     X = np.concatenate((X, one_hot ), axis = 1)
     
     # print("After One hot")
     # print(X.shape)
@@ -40,6 +40,7 @@ def transforms(X, Y, trans, reg, enc, do_reg = False, df_x = None, df_y = None):
     if(do_reg):
         reg.fit(X, Y)
     X = X.T[reg.coef_ != 0].T
+    # import pdb; pdb.set_trace()
         
 
 
@@ -127,6 +128,7 @@ def main(args):
 
 
     lambdas = np.genfromtxt("regularization.txt", delimiter = ",")
+    lambdas = [0.003]
     print(lambdas)
     best_r = []
     best_ls = []
@@ -136,6 +138,7 @@ def main(args):
         X = train_val_x.to_numpy()
         # print()
         # print(X.shape,Y.shape)
+        # import pdb;pdb.set_trace()
         reg = linear_model.LassoLars(alpha=lam)
         # reg.fit(X, Y)
 

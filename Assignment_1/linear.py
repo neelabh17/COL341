@@ -1,7 +1,6 @@
 import sys
 import pandas as pd
 import numpy as np
-from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.preprocessing import OneHotEncoder
 
@@ -9,6 +8,7 @@ class_num_dict_tmp = [['Health Service Area', 8], ['Hospital County', 57], ['Fac
 def transforms(X, trans, enc, do_reg = False, df_x = None, df_y = None):
     # polynimial fitting
     X = trans.fit_transform(X)
+    # import pdb; pdb.set_trace()
     
 
 
@@ -24,19 +24,57 @@ def transforms(X, trans, enc, do_reg = False, df_x = None, df_y = None):
 
 
     # one hot encoding
-    list_to_encode = ["Patient Disposition", "Age Group", "Payment Typology 1", "Payment Typology 2", "Payment Typology 3"]
-    # for cls_name in tqdm(enc):
-    for cls_name in list_to_encode:
-        # print("\nOne hoting for ", cls_name)
-        one_hot = enc[cls_name].transform(df_x[cls_name].to_numpy().reshape(-1,1)).toarray()
-        # import pdb; pdb.set_trace()
-        X = np.concatenate((X, one_hot ), axis = 1)
+    # list_to_encode = ["Patient Disposition", "Age Group", "Payment Typology 1", "Payment Typology 2", "Payment Typology 3"]
+    # # for cls_name in tqdm(enc):
+    # for cls_name in list_to_encode:
+    #     # print("\nOne hoting for ", cls_name)
+    #     one_hot = enc[cls_name].transform(df_x[cls_name].to_numpy().reshape(-1,1)).toarray()
+    #     # import pdb; pdb.set_trace()
+    #     X = np.concatenate((X, one_hot ), axis = 1)
     
     # print("After One hot")
     # print(X.shape)
     #TODO add ignore
-    ignore = []
-    X = X.T[ignore != 0].T
+
+    ignore = [False,  True, False, False, False, False,  True, False, False,
+       False,  True, False,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True, False, False,  True,  True,  True,
+        True,  True,  True,  True, False,  True,  True,  True,  True,
+       False,  True,  True,  True,  True, False, False,  True, False,
+        True,  True, False,  True,  True,  True,  True,  True,  True,
+       False,  True,  True,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True,  True,  True,
+       False,  True,  True,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True,  True,  True,
+       False,  True,  True,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True,  True,  True,
+       False,  True,  True,  True,  True,  True,  True,  True,  True,
+        True,  True, False,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True, False,  True,
+        True,  True,  True,  True,  True,  True,  True,  True, False,
+        True,  True, False, False,  True, False,  True,  True,  True,
+        True, False,  True,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True,  True, False, False, False, False,
+        True,  True, False,  True, False,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True,  True, False,
+        True,  True, False,  True,  True,  True, False,  True,  True,
+        True,  True,  True,  True, False,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True,  True,  True,
+        True,  True,  True,  True,  True, False,  True, False,  True,
+        True,  True,  True,  True,  True,  True,  True,  True, False,
+       False,  True,  True,  True,  True,  True,  True,  True,  True,
+        True,  True, False, False,  True,  True,  True,  True,  True,
+        True,  True,  True,  True, False,  True,  True,  True,  True,
+        True,  True,  True,  True,  True,  True,  True,  True, False,
+        True,  True,  True,  True,  True,  True,  True,  True, False,
+       False,  True,  True,  True,  True,  True, False,  True,  True,
+        True,  True, False, False,  True,  True, False, False,  True,
+       False,  True,  True,  True,  True, False,  True, False, False,
+        True,  True,  True,  True,  True,  True,  True,  True, False,
+       False]
+
+    X = X.T[ignore].T
         
 
 
@@ -255,6 +293,7 @@ def mode_c(args):
 
     Y = train_val_y.to_numpy()
     X = train_val_x.to_numpy()
+    # import pdb; pdb.set_trace()
     # print()
     # print(X.shape,Y.shape)
 
@@ -284,7 +323,7 @@ def mode_c(args):
 
     # Y = test_y.to_numpy()
     X = test_x.to_numpy()
-    X = transforms(X, Y, trans, enc, do_reg= False, df_x = test_x)
+    X = transforms(X, trans, enc, do_reg= False, df_x = test_x)
     # X_new = trans.fit_transform(X)
     # X = X_new.T[reg.coef_ != 0].T
     # dummy = np.array([1 for _ in range(X.shape[0])]).reshape(-1,1)
@@ -294,7 +333,7 @@ def mode_c(args):
     Y_hat = np.matmul(X, W)
     with open(output_file_name, "w") as f:
         for y in Y_hat:
-            f.write(str(y))
+            f.write(str(abs(y)))
             f.write("\n")
 
 
