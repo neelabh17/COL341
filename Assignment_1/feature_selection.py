@@ -12,24 +12,67 @@ for a,b in class_num_dict_tmp:
 def transforms(X, Y, trans, reg, enc, do_reg = False, df_x = None, df_y = None):
     # polynimial fitting
     X = trans.fit_transform(X)
+    
+    # feat = np.zeros((df_x.shape[0],1))
+    # feat[(df_x["Birth Weight"] <=1000) & (df_x["Birth Weight"] !=0) ]
+    # X = np.concatenate((X, feat ), axis = 1)
+
+    # feat = np.zeros((df_x.shape[0],1))
+    # feat[(df_x["Birth Weight"] <=1500) & (df_x["Birth Weight"] >=1000) ]
+    # X = np.concatenate((X, feat ), axis = 1)
+
+    # feat = np.zeros((df_x.shape[0],1))
+    # feat[(df_x["Birth Weight"] <=2000) & (df_x["Birth Weight"] >1500) ]
+    # X = np.concatenate((X, feat ), axis = 1)
+
+    # feat = np.zeros((df_x.shape[0],1))
+    # feat[(df_x["Birth Weight"] <=3500) & (df_x["Birth Weight"] >2000) ]
+    # X = np.concatenate((X, feat ), axis = 1)
+
+    # feat = np.zeros((df_x.shape[0],1))
+    # feat[(df_x["Birth Weight"] >=3500) ]
+    # X = np.concatenate((X, feat ), axis = 1)
+
+    # # Length of Stay 
+    # feat = np.zeros((df_x.shape[0],1))
+    # feat[(df_x["Length of Stay"] >= 120 ) ]
+    # X = np.concatenate((X, feat ), axis = 1)
+
+    # feat = np.zeros((df_x.shape[0],1))
+    # feat[(df_x["Length of Stay"] <=3500) & (df_x["Length of Stay"] >2000) ]
+    # X = np.concatenate((X, feat ), axis = 1)
+
+
+
+
+
+
+
+
+
+
+
+
 
     # one hot encoding
-    for cls_name in tqdm(enc):
-        print("\nOne hoting for ", cls_name)
+    list_to_encode = ["Patient Disposition", "Age Group", "Payment Typology 1", "Payment Typology 2", "Payment Typology 3"]
+    # for cls_name in tqdm(enc):
+    for cls_name in list_to_encode:
+        # print("\nOne hoting for ", cls_name)
         one_hot = enc[cls_name].transform(df_x[cls_name].to_numpy().reshape(-1,1)).toarray()
         # import pdb; pdb.set_trace()
         X = np.concatenate((X, one_hot ), axis = 1)
     
-    print("After One hot")
-    print(X.shape)
-
-        
+    # print("After One hot")
+    # print(X.shape)
 
     if(do_reg):
         reg.fit(X, Y)
-
-
     X = X.T[reg.coef_ != 0].T
+        
+
+
+
     dummy = np.array([1 for _ in range(X.shape[0])]).reshape(-1,1)
     X = np.concatenate((X,dummy), axis = 1)
     return X
@@ -51,7 +94,7 @@ def main(args):
     # data["Length of Stay"] =(data["Length of Stay"] - data["Length of Stay"].mean()) / data["Length of Stay"].std()
     mean = data["Total Costs"].mean()
     std = data["Total Costs"].std()
-    print("Mean and std are ", mean, std)
+    # print("Mean and std are ", mean, std)
     # data["Total Costs"] =(data["Total Costs"] - data["Total Costs"].mean()) / data["Total Costs"].std()
     enc = {}
     for class_name in class_num_dict:
@@ -79,7 +122,7 @@ def main(args):
 
     # data_Y = data["Total Costs"]
     # data_X = data
-    print(train.shape, val.shape, test.shape)
+    # print(train.shape, val.shape, test.shape)
 
     # Super basic baseline
 
@@ -89,7 +132,7 @@ def main(args):
     best_r = []
     best_ls = []
     # Lasso LARS
-    for lam in tqdm(lambdas):
+    for lam in lambdas:
         Y = train_val_y.to_numpy()
         X = train_val_x.to_numpy()
         # print()
@@ -115,7 +158,7 @@ def main(args):
         # X = np.concatenate((X,dummy), axis = 1)
         W = np.matmul(np.linalg.inv(np.matmul(X.T, X)), np.matmul(X.T, Y))
 
-        print("W shape ", W.shape)
+        # print("W shape ", W.shape)
 
 
         # import pdb; pdb.set_trace()
@@ -130,8 +173,11 @@ def main(args):
         # X = np.concatenate((X,dummy), axis = 1)
         # # import pdb; pdb.set_trace()
 
-        best_r.append([lam, 1 - np.linalg.norm(np.matmul(X, W)- Y)/ np.linalg.norm(Y), reg.score(X,Y), X.shape[1]])
-        best_ls.append([lam, np.linalg.norm(np.matmul(X, W)- Y),X.shape[1]])
+        Y_hat = np.matmul(X, W)
+        pred_error = 1 - np.sum(np.square(Y_hat - Y))/np.sum(np.square(Y))
+        best_r.append([lam, 1 - ((Y-Y_hat)**2).sum()/((Y-Y.mean())**2).sum(), pred_error, X.shape[1]])
+        print([lam, 1 - ((Y-Y_hat)**2).sum()/((Y-Y.mean())**2).sum(), pred_error, X.shape[1]])
+        best_ls.append([lam, np.linalg.norm(Y_hat- Y),X.shape[1]])
 
     # import pdb; pdb.set_trace()
     best_r.sort(key = lambda x:x [1], reverse = True)
