@@ -4,7 +4,6 @@ import pandas as pd
 from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.preprocessing import OneHotEncoder
-from tqdm import tqdm
 class_num_dict_tmp = [['Health Service Area', 8], ['Hospital County', 57], ['Facility Name', 212], ['Age Group', 5], ['Zip Code - 3 digits', 50], ['Gender', 3], ['Race', 4], ['Ethnicity', 4], ['Type of Admission', 6], ['Patient Disposition', 19], ['CCS Diagnosis Description', 260], ['CCS Procedure Description', 224], ['APR DRG Description', 308], ['APR MDC Description', 24], ['APR Severity of Illness Description', 4], ['APR Risk of Mortality', 4], ['APR Medical Surgical Description', 2], ['Payment Typology 1', 10], ['Payment Typology 2', 11], ['Payment Typology 3', 11], ['Emergency Department Indicator', 2]]
 class_num_dict = {}
 for a,b in class_num_dict_tmp:
@@ -13,34 +12,6 @@ def transforms(X, Y, trans, reg, enc, do_reg = False, df_x = None, df_y = None):
     # polynimial fitting
     X = trans.fit_transform(X)
     
-    # feat = np.zeros((df_x.shape[0],1))
-    # feat[(df_x["Birth Weight"] <=1000) & (df_x["Birth Weight"] !=0) ]
-    # X = np.concatenate((X, feat ), axis = 1)
-
-    # feat = np.zeros((df_x.shape[0],1))
-    # feat[(df_x["Birth Weight"] <=1500) & (df_x["Birth Weight"] >=1000) ]
-    # X = np.concatenate((X, feat ), axis = 1)
-
-    # feat = np.zeros((df_x.shape[0],1))
-    # feat[(df_x["Birth Weight"] <=2000) & (df_x["Birth Weight"] >1500) ]
-    # X = np.concatenate((X, feat ), axis = 1)
-
-    # feat = np.zeros((df_x.shape[0],1))
-    # feat[(df_x["Birth Weight"] <=3500) & (df_x["Birth Weight"] >2000) ]
-    # X = np.concatenate((X, feat ), axis = 1)
-
-    # feat = np.zeros((df_x.shape[0],1))
-    # feat[(df_x["Birth Weight"] >=3500) ]
-    # X = np.concatenate((X, feat ), axis = 1)
-
-    # # Length of Stay 
-    # feat = np.zeros((df_x.shape[0],1))
-    # feat[(df_x["Length of Stay"] >= 120 ) ]
-    # X = np.concatenate((X, feat ), axis = 1)
-
-    # feat = np.zeros((df_x.shape[0],1))
-    # feat[(df_x["Length of Stay"] <=3500) & (df_x["Length of Stay"] >2000) ]
-    # X = np.concatenate((X, feat ), axis = 1)
 
 
 
@@ -72,9 +43,37 @@ def transforms(X, Y, trans, reg, enc, do_reg = False, df_x = None, df_y = None):
         
 
 
+    feat = np.zeros((df_x.shape[0],1)) + np.random.rand(df_x.shape[0],1)/1000
+    feat[(df_x["Birth Weight"] <=1000) & (df_x["Birth Weight"] !=0) ] = 1
+    X = np.concatenate((X, feat ), axis = 1)
 
-    dummy = np.array([1 for _ in range(X.shape[0])]).reshape(-1,1)
-    X = np.concatenate((X,dummy), axis = 1)
+    feat = np.zeros((df_x.shape[0],1)) + np.random.rand(df_x.shape[0],1)/1000
+    feat[(df_x["Birth Weight"] <=1500) & (df_x["Birth Weight"] >=1000) ] = 1 
+    X = np.concatenate((X, feat ), axis = 1)
+
+    feat = np.zeros((df_x.shape[0],1)) + np.random.rand(df_x.shape[0],1)/1000
+    feat[(df_x["Birth Weight"] <=2000) & (df_x["Birth Weight"] >1500) ] = 1
+    X = np.concatenate((X, feat ), axis = 1)
+
+    feat = np.zeros((df_x.shape[0],1)) + np.random.rand(df_x.shape[0],1)/1000
+    feat[(df_x["Birth Weight"] <=3500) & (df_x["Birth Weight"] >2000) ] = 1
+    X = np.concatenate((X, feat ), axis = 1)
+
+    feat = np.zeros((df_x.shape[0],1)) + np.random.rand(df_x.shape[0],1)/1000
+    feat[(df_x["Birth Weight"] >=3500) ] = 1
+    X = np.concatenate((X, feat ), axis = 1)
+
+    # Length of Stay 
+    feat = np.zeros((df_x.shape[0],1)) + np.random.rand(df_x.shape[0],1)/1000
+    feat[(df_x["Length of Stay"] >= 120 ) ] = 1
+    X = np.concatenate((X, feat ), axis = 1)
+
+    feat = np.zeros((df_x.shape[0],1)) + np.random.rand(df_x.shape[0],1)/1000
+    feat[(df_x["Length of Stay"] <=15) & (df_x["Length of Stay"] >=5) ] = 1
+    X = np.concatenate((X, feat ), axis = 1)
+
+    # dummy = np.array([1 for _ in range(X.shape[0])]).reshape(-1,1)
+    # X = np.concatenate((X,dummy), axis = 1)
     return X
 
 # import the data
