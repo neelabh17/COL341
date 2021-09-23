@@ -1,8 +1,12 @@
 import sys
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.preprocessing import OneHotEncoder
+# from sklearn.preprocessing import PolynomialFeatures
+# from sklearn.preprocessing import OneHotEncoder
+from scipy.special import softmax
+
+from tqdm import tqdm
+# TODO remove tqdm dependencies
 
 # class_num_dict_tmp = [['Health Service Area', 8], ['Hospital County', 57], ['Facility Name', 212], ['Age Group', 5], ['Zip Code - 3 digits', 50], ['Gender', 3], ['Race', 4], ['Ethnicity', 4], ['Type of Admission', 6], ['Patient Disposition', 19], ['CCS Diagnosis Description', 260], ['CCS Procedure Description', 224], ['APR DRG Description', 308], ['APR MDC Description', 24], ['APR Severity of Illness Description', 4], ['APR Risk of Mortality', 4], ['APR Medical Surgical Description', 2], ['Payment Typology 1', 10], ['Payment Typology 2', 11], ['Payment Typology 3', 11], ['Emergency Department Indicator', 2]]
 def load_data(train_file_name, test_file_name):
@@ -10,6 +14,19 @@ def load_data(train_file_name, test_file_name):
     test = pd.read_csv(test_file_name, index_col = 0)
         
     Y_train = np.array(train['Length of Stay'])
+    # 1-8 encoding
+    Y_train -= 1
+    # 0-7 encoding
+
+    # TODO: remove hardcoded 8
+    one_hot_shape = (Y_train.shape[0], Y_train.max()+1)
+    # one_hot_shape = (Y_train.shape[0], 8)
+
+    one_hot = np.zeros(one_hot_shape)
+    rows = np.arange(Y_train.shape[0])
+
+    one_hot[rows, Y_train] = 1
+    Y_train = one_hot
 
     train = train.drop(columns = ['Length of Stay'])
 
@@ -59,6 +76,19 @@ def get_param_dict(param_file):
 
     print(return_dict)
     return return_dict
+
+def get_lr(param_dict, t, W, X_train, Y_train, d):
+    # t is the iteration number of gradient update
+    mode = param_dict["mode"]
+    if(mode == 1):
+        return param_dict["n0"]
+    elif(mode == 2):
+        return param_dict["n0"]/(t**0.5)
+    elif(mode == 3):
+        # dunno how to do this
+        return 0
+        pass
+
         
 
         
@@ -67,23 +97,27 @@ def get_param_dict(param_file):
 def mode_a(args):
     train_file_name, test_file_name, param_file, output_file_name, weight_file_name = args[2:] 
     X_train, Y_train, X_test = load_data(train_file_name, test_file_name)
+    # Y_train shape is [batch,k]
     assert X_train.shape[1] == X_test.shape[1]
 
     param_dict = get_param_dict(param_file)
+    n_iter = param_dict["n_iter"]
 
-    import pdb; pdb.set_trace()
     # initialise the weight matrix
-    W = np.zeros(X_train.shape[1], 8)
+    W = np.zeros((X_train.shape[1], 8))
+    W = np.random.rand(X_train.shape[1], 8)
+    
+    pbar = tqdm(range(1,n_iter+1))
+    for t in pbar:
+        Y_hat_train = softmax(np.matmul(X_train, W), axis = 1)
+        # import pdb; pdb.set_trace()
+        d = np.matmul(X_train.T, (Y_train- Y_hat_train))
+        # import pdb; pdb.set_trace()
+        lr = get_lr(param_dict,t, W, X_train, Y_train, d)
+        pbar.set_postfix({"Loss": (Y_hat_train*Y_train).sum()/Y_train.shape[0], "LR": lr})
+        print(Y_hat_train.argmax(axis = 1))
 
-
-
-
-
-    d = None
-    lr = None
-
-    W = W - lr*d
-
+        W = W - lr*d
 
     pass
 
