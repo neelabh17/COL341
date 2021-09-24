@@ -41,8 +41,8 @@ def load_data(train_file_name, test_file_name):
     X_test = data[train.shape[0]:, :]
 
     # Add a dummy ones in the data to account for bias
-    X_train = np.concatenate((X_train, np.ones((X_train.shape[0], 1))), axis = 1)
-    X_test = np.concatenate((X_test, np.ones((X_test.shape[0], 1))), axis = 1)
+    X_train = np.concatenate((np.ones((X_train.shape[0], 1)), X_train), axis = 1)
+    X_test = np.concatenate((np.ones((X_test.shape[0], 1)), X_test), axis = 1)
 
     return X_train, Y_train, X_test
 
@@ -77,7 +77,7 @@ def get_param_dict(param_file):
     print(return_dict)
     return return_dict
 
-def get_lr(param_dict, t, W, X_train, Y_train, d):
+def get_lr(param_dict, t, W, X_train, Y_train, d, lr):
     # t is the iteration number of gradient update
     mode = param_dict["mode"]
     if(mode == 1):
@@ -86,8 +86,20 @@ def get_lr(param_dict, t, W, X_train, Y_train, d):
         return param_dict["n0"]/(t**0.5)
     elif(mode == 3):
         # dunno how to do this
-        return 0
-        pass
+        alpha = param_dict["alpha"]
+        beta = param_dict["beta"]
+
+        baseline_loss = loss_given_weight(X_train, Y_train, W)
+        while(loss_given_weight(X_train, Y_train, W - lr*d) > baseline_loss - alpha*lr*np.linalg.norm(d)**2 ):
+            lr*=beta
+
+        return lr
+
+def loss(Y_train, Y_hat_train):
+    return -(np.log(Y_hat_train)*Y_train).sum()/(Y_train.shape[0])
+
+def loss_given_weight(X_train, Y_train, W):
+    return -(np.log(softmax(np.matmul(X_train, W), axis = 1))*Y_train).sum()/(Y_train.shape[0])
 
         
 
@@ -102,23 +114,42 @@ def mode_a(args):
 
     param_dict = get_param_dict(param_file)
     n_iter = param_dict["n_iter"]
+    lr = param_dict["n0"]
 
     # initialise the weight matrix
     W = np.zeros((X_train.shape[1], 8))
-    W = np.random.rand(X_train.shape[1], 8)
+    # W = np.random.rand(X_train.shape[1], 8)
     
     pbar = tqdm(range(1,n_iter+1))
     for t in pbar:
         Y_hat_train = softmax(np.matmul(X_train, W), axis = 1)
         # import pdb; pdb.set_trace()
-        d = np.matmul(X_train.T, (Y_train- Y_hat_train))
+        d = -np.matmul(X_train.T, (Y_train- Y_hat_train))/(X_train.shape[0])
         # import pdb; pdb.set_trace()
-        lr = get_lr(param_dict,t, W, X_train, Y_train, d)
-        pbar.set_postfix({"Loss": (Y_hat_train*Y_train).sum()/Y_train.shape[0], "LR": lr})
-        print(Y_hat_train.argmax(axis = 1))
+        lr = get_lr(param_dict,t, W, X_train, Y_train, d, lr)
+        # print(Y_hat_train.argmax(axis = 1))
 
         W = W - lr*d
 
+        pbar.set_postfix({"Loss": loss(Y_train, Y_hat_train), "LR": lr})
+    
+    Y_hat_test = softmax(np.matmul(X_test, W), axis = 1).argmax(axis = 1)
+    # 0-7 encoding
+
+    Y_hat_test+=1
+    # 1-8 encoding
+
+    with open(output_file_name, "w") as f:
+        for y in Y_hat_test:
+            f.write(str(y))
+            f.write("\n")
+
+    with open(weight_file_name, "w") as f:
+        for w in W.reshape(-1):
+            f.write(str(w))
+            f.write("\n")
+
+    # import pdb; pdb.set_trace()
     pass
 
 def mode_b(args):
