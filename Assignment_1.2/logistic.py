@@ -77,7 +77,7 @@ def get_param_dict(param_file):
     print(return_dict)
     return return_dict
 
-def get_lr(param_dict, t, W, X_train, Y_train, d, lr):
+def get_lr(param_dict, t, W, X_train, Y_train, d, n0):
     # t is the iteration number of gradient update
     mode = param_dict["mode"]
     if(mode == 1):
@@ -89,6 +89,7 @@ def get_lr(param_dict, t, W, X_train, Y_train, d, lr):
         alpha = param_dict["alpha"]
         beta = param_dict["beta"]
 
+        lr = n0
         baseline_loss = loss_given_weight(X_train, Y_train, W)
         while(loss_given_weight(X_train, Y_train, W - lr*d) > baseline_loss - alpha*lr*np.linalg.norm(d)**2 ):
             lr*=beta
@@ -96,7 +97,7 @@ def get_lr(param_dict, t, W, X_train, Y_train, d, lr):
         return lr
 
 def loss(Y_train, Y_hat_train):
-    return -(np.log(Y_hat_train)*Y_train).sum()/(Y_train.shape[0])
+    return -(np.log(Y_hat_train)*Y_train).sum()/(2*Y_train.shape[0])
 
 def loss_given_weight(X_train, Y_train, W):
     return -(np.log(softmax(np.matmul(X_train, W), axis = 1))*Y_train).sum()/(Y_train.shape[0])
@@ -115,6 +116,7 @@ def mode_a(args):
     param_dict = get_param_dict(param_file)
     n_iter = param_dict["n_iter"]
     lr = param_dict["n0"]
+    n0 = param_dict["n0"]
 
     # initialise the weight matrix
     W = np.zeros((X_train.shape[1], 8))
@@ -126,7 +128,7 @@ def mode_a(args):
         # import pdb; pdb.set_trace()
         d = -np.matmul(X_train.T, (Y_train- Y_hat_train))/(X_train.shape[0])
         # import pdb; pdb.set_trace()
-        lr = get_lr(param_dict,t, W, X_train, Y_train, d, lr)
+        lr = get_lr(param_dict,t, W, X_train, Y_train, d, n0)
         # print(Y_hat_train.argmax(axis = 1))
 
         W = W - lr*d
