@@ -135,7 +135,8 @@ def loss(Y_train, Y_hat_train):
     return -(np.log(Y_hat_train)*Y_train).sum()/(Y_train.shape[0])
 
 def loss_given_weight(X_train, Y_train, W):
-    return -(np.log(softmax(np.matmul(X_train, W), axis = 1))*Y_train).sum()/(Y_train.shape[0])
+    gamma = 10**(-15)
+    return -(np.log(np.clip(softmax(np.matmul(X_train, W), axis = 1), gamma, 1-gamma))*Y_train).sum()/(Y_train.shape[0])
 
         
 
@@ -207,6 +208,11 @@ def mode_b(args):
     
     pbar = tqdm(range(1,n_iter+1))
     for t in pbar:
+        Y_hat_train = softmax(np.matmul(X_train, W), axis = 1)
+        # import pdb; pdb.set_trace()
+        d = -np.matmul(X_train.T, (Y_train- Y_hat_train))/(X_train.shape[0])
+        # import pdb; pdb.set_trace()
+        lr = get_lr(param_dict,t, W, X_train, Y_train, d, n0)
         for batch in range((X_train.shape[0]-1)//bs + 1):
             if(X_train[batch*bs:batch*bs + bs, :].shape[0]!= bs):
                 # import pdb; pdb.set_trace()
@@ -217,7 +223,7 @@ def mode_b(args):
                 # import pdb; pdb.set_trace()
                 d = -np.matmul(X_train[batch*bs:batch*bs + bs, :].T, (Y_train[batch*bs:batch*bs + bs, :]- Y_hat_train))/(X_train[batch*bs:batch*bs + bs, :].shape[0])
                 # import pdb; pdb.set_trace()
-                lr = get_lr(param_dict,t, W, X_train[batch*bs:batch*bs + bs, :], Y_train[batch*bs:batch*bs + bs, :], d, n0)
+                # lr = get_lr(param_dict,t, W, X_train[batch*bs:batch*bs + bs, :], Y_train[batch*bs:batch*bs + bs, :], d, n0)
                 # print(Y_hat_train.argmax(axis = 1))
 
                 W = W - lr*d
