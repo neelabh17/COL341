@@ -1,1 +1,1 @@
-python3 param_search.py data/train.csv data/test.csv
+python3 logistic.py c data/train.csv data/test.csv model_outputfile_c.txt model_weightfile_c.txt
