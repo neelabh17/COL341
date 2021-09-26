@@ -1,0 +1,1 @@
+python3 logistic_features_selection.py data/train.csv data/test.csv
