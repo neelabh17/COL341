@@ -71,10 +71,11 @@ def main(args):
     # Y_train shape is [batch,k]
     assert X_train.shape[1] == X_test.shape[1]
     # import pdb; pdb.set_trace()
-    model = SelectKBest(chi2, k=500)
+    model = SelectKBest(chi2, k=499)
     X_new = model.fit_transform(X_train, Y_train.argmax(axis = 1))
+    index = model.get_support(True).tolist()
     print(model.get_support(True).tolist())
-    # import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
 
 
     
