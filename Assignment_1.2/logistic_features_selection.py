@@ -15,7 +15,10 @@ from sklearn.feature_selection import SelectKBest, chi2
 def load_data(train_file_name, test_file_name):
     train = pd.read_csv(train_file_name, index_col = 0)    
     test = pd.read_csv(test_file_name, index_col = 0)
-        
+    # import pdb; pdb.set_trace()
+    col_drop = ["Payment Typology 1","Gender","APR Medical Surgical Description","Payment Typology 3","Ethnicity","Race","Zip Code - 3 digits","Hospital County","Facility Id","Operating Certificate Number","Facility Name","Health Service Area","Type of Admission"]   
+    train.drop(columns = col_drop, inplace = True)
+    test.drop(columns = col_drop, inplace = True)
     Y_train = np.array(train['Length of Stay'])
     # 1-8 encoding
     Y_train -= 1
