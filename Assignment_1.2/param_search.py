@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-from tqdm import tqdm
-# TODO remove tqdm dependencies
+# from tqdm import tqdm
 
 # class_num_dict_tmp = [['Health Service Area', 8], ['Hospital County', 57], ['Facility Name', 212], ['Age Group', 5], ['Zip Code - 3 digits', 50], ['Gender', 3], ['Race', 4], ['Ethnicity', 4], ['Type of Admission', 6], ['Patient Disposition', 19], ['CCS Diagnosis Description', 260], ['CCS Procedure Description', 224], ['APR DRG Description', 308], ['APR MDC Description', 24], ['APR Severity of Illness Description', 4], ['APR Risk of Mortality', 4], ['APR Medical Surgical Description', 2], ['Payment Typology 1', 10], ['Payment Typology 2', 11], ['Payment Typology 3', 11], ['Emergency Department Indicator', 2]]
 def load_data(train_file_name, test_file_name):
@@ -88,8 +87,9 @@ def main(args):
             W = np.zeros((X_train.shape[1], 8))
             # W = np.random.rand(X_train.shape[1], 8)
             
-            pbar = tqdm(range(1,n_iter+1))
-            for t in pbar:
+            # pbar = tqdm(range(1,n_iter+1))
+            # for t in pbar:
+            for t in range(1,n_iter+1):
                 Y_hat_train = softmax(np.matmul(X_train, W), axis = 1)
                 # import pdb; pdb.set_trace()
                 d = -np.matmul(X_train.T, (Y_train- Y_hat_train))/(X_train.shape[0])
@@ -108,7 +108,7 @@ def main(args):
                         # print(Y_hat_train.argmax(axis = 1))
 
                         W = W - lr*d
-                        pbar.set_postfix({"Loss": loss(Y_train[batch*bs:batch*bs + bs, :], Y_hat_train), "LR": lr, "Iter": str(batch+1)+ "/" + str((X_train.shape[0]-1)//bs + 1) })
+                        # pbar.set_postfix({"Loss": loss(Y_train[batch*bs:batch*bs + bs, :], Y_hat_train), "LR": lr, "Iter": str(batch+1)+ "/" + str((X_train.shape[0]-1)//bs + 1) })
                 epoch[i].append(t)
                 loss_train[i].append(loss_given_weight(X_train, Y_train, W))
                 loss_val[i].append(loss_given_weight(X_val, Y_val, W))
@@ -155,8 +155,9 @@ def main(args):
             W = np.zeros((X_train.shape[1], 8))
             # W = np.random.rand(X_train.shape[1], 8)
             
-            pbar = tqdm(range(1,n_iter+1))
-            for t in pbar:
+            # pbar = tqdm(range(1,n_iter+1))
+            # for t in pbar:
+            for t in range(1,n_iter+1):
                 Y_hat_train = softmax(np.matmul(X_train, W), axis = 1)
                 # import pdb; pdb.set_trace()
                 d = -np.matmul(X_train.T, (Y_train- Y_hat_train))/(X_train.shape[0])
@@ -175,7 +176,7 @@ def main(args):
                         # print(Y_hat_train.argmax(axis = 1))
 
                         W = W - lr*d
-                        pbar.set_postfix({"Loss": loss(Y_train[batch*bs:batch*bs + bs, :], Y_hat_train), "LR": lr, "Iter": str(batch+1)+ "/" + str((X_train.shape[0]-1)//bs + 1) })
+                        # pbar.set_postfix({"Loss": loss(Y_train[batch*bs:batch*bs + bs, :], Y_hat_train), "LR": lr, "Iter": str(batch+1)+ "/" + str((X_train.shape[0]-1)//bs + 1) })
                 epoch[i].append(t)
                 loss_train[i].append(loss_given_weight(X_train, Y_train, W))
                 loss_val[i].append(loss_given_weight(X_val, Y_val, W))
