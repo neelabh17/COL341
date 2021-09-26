@@ -139,7 +139,7 @@ def loss_given_weight(X_train, Y_train, W):
     return -(np.log(np.clip(softmax(np.matmul(X_train, W), axis = 1), gamma, 1-gamma))*Y_train).sum()/(Y_train.shape[0])
 
         
-def get_lr_for_part_c(param_dict, t, W, X_train, Y_train, d, n0):
+def get_lr_for_part_c(t, W, X_train, Y_train, d, n0):
     return 0.25
         
 
@@ -251,12 +251,12 @@ def mode_b(args):
     pass
 
 def mode_c(args):
-    train_file_name, test_file_name, param_file, output_file_name, weight_file_name = args[2:] 
+    train_file_name, test_file_name, output_file_name, weight_file_name = args[2:] 
     X_train, Y_train, X_test = load_data(train_file_name, test_file_name)
     # Y_train shape is [batch,k]
     assert X_train.shape[1] == X_test.shape[1]
 
-    param_dict = get_param_dict_b(param_file)
+    # param_dict = get_param_dict_b(param_file)
     n_iter = 300
     lr = 0.25
     n0 = 0.25
@@ -274,7 +274,7 @@ def mode_c(args):
         # import pdb; pdb.set_trace()
         d = -np.matmul(X_train.T, (Y_train- Y_hat_train))/(X_train.shape[0])
         # import pdb; pdb.set_trace()
-        lr = get_lr_for_part_c(param_dict,t, W, X_train, Y_train, d, n0)
+        lr = get_lr_for_part_c(t, W, X_train, Y_train, d, n0)
         for batch in range((X_train.shape[0]-1)//bs + 1):
             if(X_train[batch*bs:batch*bs + bs, :].shape[0]!= bs):
                 # import pdb; pdb.set_trace()
@@ -313,6 +313,65 @@ def mode_c(args):
     pass
 
 def mode_d(args):
+    train_file_name, test_file_name, output_file_name, weight_file_name = args[2:] 
+    X_train, Y_train, X_test = load_data(train_file_name, test_file_name)
+    # Y_train shape is [batch,k]
+    assert X_train.shape[1] == X_test.shape[1]
+
+    # param_dict = get_param_dict_b(param_file)
+    n_iter = 300
+    lr = 0.25
+    n0 = 0.25
+    bs = 1000
+
+    # TODO intermitten saving at 100 150 200 150 300 350 epoch
+
+    # initialise the weight matrix
+    W = np.zeros((X_train.shape[1], 8))
+    # W = np.random.rand(X_train.shape[1], 8)
+    
+    pbar = tqdm(range(1,n_iter+1))
+    for t in pbar:
+        Y_hat_train = softmax(np.matmul(X_train, W), axis = 1)
+        # import pdb; pdb.set_trace()
+        d = -np.matmul(X_train.T, (Y_train- Y_hat_train))/(X_train.shape[0])
+        # import pdb; pdb.set_trace()
+        lr = get_lr_for_part_c(t, W, X_train, Y_train, d, n0)
+        for batch in range((X_train.shape[0]-1)//bs + 1):
+            if(X_train[batch*bs:batch*bs + bs, :].shape[0]!= bs):
+                # import pdb; pdb.set_trace()
+                pass
+            else:
+
+                Y_hat_train = softmax(np.matmul(X_train[batch*bs:batch*bs + bs, :], W), axis = 1)
+                # import pdb; pdb.set_trace()
+                d = -np.matmul(X_train[batch*bs:batch*bs + bs, :].T, (Y_train[batch*bs:batch*bs + bs, :]- Y_hat_train))/(X_train[batch*bs:batch*bs + bs, :].shape[0])
+                # import pdb; pdb.set_trace()
+                # lr = get_lr(param_dict,t, W, X_train[batch*bs:batch*bs + bs, :], Y_train[batch*bs:batch*bs + bs, :], d, n0)
+                # print(Y_hat_train.argmax(axis = 1))
+
+                W = W - lr*d
+                pbar.set_postfix({"Loss": loss(Y_train[batch*bs:batch*bs + bs, :], Y_hat_train), "LR": lr, "Iter": str(batch+1)+ "/" + str((X_train.shape[0]-1)//bs + 1) })
+
+        if(t%50 == 0):
+            Y_hat_test = softmax(np.matmul(X_test, W), axis = 1).argmax(axis = 1)
+            # 0-7 encoding
+
+            Y_hat_test+=1
+            # 1-8 encoding
+
+            with open(output_file_name, "w") as f:
+                for y in Y_hat_test:
+                    f.write(str(y))
+                    f.write("\n")
+
+            with open(weight_file_name, "w") as f:
+                for w in W.reshape(-1):
+                    f.write(str(w))
+                    f.write("\n")
+    
+
+    # import pdb; pdb.set_trace()
     pass
 
 

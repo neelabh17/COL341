@@ -73,7 +73,7 @@ def main(args):
     # import pdb; pdb.set_trace()
     model = SelectKBest(chi2, k=500)
     X_new = model.fit_transform(X_train, Y_train.argmax(axis = 1))
-    print(model.get_support(True))
+    print(model.get_support(True).tolist())
     # import pdb; pdb.set_trace()
 
 
