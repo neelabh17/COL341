@@ -75,7 +75,7 @@ def main(args):
     X_new = model.fit_transform(X_train, Y_train.argmax(axis = 1))
     index = model.get_support(True).tolist()
     print(model.get_support(True).tolist())
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
 
     

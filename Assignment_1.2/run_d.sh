@@ -1,0 +1,1 @@
+python3 logistic.py d data/train.csv data/test.csv model_outputfile_d.txt model_weightfile_d.txt

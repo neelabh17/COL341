@@ -1,1 +1,5 @@
 data/
+model_outputfile_c.txt
+model_weightfile_c.txt
+model_outputfile_d.txt
+model_weightfile_d.txt
