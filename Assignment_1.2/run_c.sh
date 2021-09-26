@@ -1,0 +1,1 @@
+python3 param_search.py data/train.csv data/test.csv
