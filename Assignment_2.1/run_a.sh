@@ -1,0 +1,1 @@
+python neural_a.py data/ toy_dataset/ param_a.txt
