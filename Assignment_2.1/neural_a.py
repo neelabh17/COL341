@@ -5,10 +5,8 @@ import numpy as np
 import math
 # from sklearn.preprocessing import PolynomialFeatures
 # from sklearn.preprocessing import OneHotEncoder
-from scipy.special import softmax
-
-# from tqdm import tqdm
-
+from tqdm import tqdm
+# TODO remove tqdm dependencies
 # class_num_dict_tmp = [['Health Service Area', 8], ['Hospital County', 57], ['Facility Name', 212], ['Age Group', 5], ['Zip Code - 3 digits', 50], ['Gender', 3], ['Race', 4], ['Ethnicity', 4], ['Type of Admission', 6], ['Patient Disposition', 19], ['CCS Diagnosis Description', 260], ['CCS Procedure Description', 224], ['APR DRG Description', 308], ['APR MDC Description', 24], ['APR Severity of Illness Description', 4], ['APR Risk of Mortality', 4], ['APR Medical Surgical Description', 2], ['Payment Typology 1', 10], ['Payment Typology 2', 11], ['Payment Typology 3', 11], ['Emergency Department Indicator', 2]]
 def load_data(input_file):
     train_file_name = "toy_dataset_train.csv"
@@ -51,6 +49,7 @@ def get_param_dict(param_file):
         lr = float(lines[4])
         f_act = int(lines[5])
         loss = int(lines[6])
+        # 0 for CE 1 for MSE
         seed = int(lines[7])
 
 
@@ -82,7 +81,7 @@ def get_act_func(mode):
     def log_sigmoid(A):
         # return the activation and the cache derivative
         f = 1/(1+ np.exp(-A))
-        return np.log(f), 1-f
+        return f, f*(1-f)
     def tanh(A):
         # return the activation and the cache derivative
         f = np.tanh(A)
@@ -112,55 +111,56 @@ def get_act_func(mode):
     elif(mode == 3):
         return softmax
 
-def get_derivative_func(mode):
-    def der_log_sigmoid(A):
-        return np.log(1/(1+ np.exp(-A)))
-    def der_tanh(A):
-        return np.tanh(A)
-    def der_relu(A):
-        B = np.array(A)
-        B[B<0] = 0
-        return B
-
-    if(mode == 0):
-        return der_log_sigmoid
-    elif(mode == 1):
-        return der_tanh
-    else:
-        return der_relu
-
 class NNet:
     def __init__(self, input_size, param_dict, output_act_mode = 3):
         self.input_size = input_size
 
-        self.weights = []
-        self.activation_f = []
-        self.activation_mode = []
-        self.cache = []
+        self.weights = None
+        self.activation_f = None
+        self.activation_mode = None
+        self.cache = None
+        self.Z = None
+        self.dA = None
+        self.current_epoch = None
 
         self.seed = param_dict["seed"]
         self.arc = param_dict["arc"]
         self.intermediate_activation_mode = param_dict["f_act"]
         self.bs = param_dict["bs"]
         self.epoch = param_dict["epoch"]
+        self.loss_mode = param_dict["loss"]
+        self.lr_mode = param_dict["lr_mode"]
+        self.lr_mode = param_dict["lr"]
+        self.num_classes = self.arc[-1]
 
         self.final_activation_mode = output_act_mode 
 
         self.initialise_weights()
     
     def initialise_weights(self):
-        assert len(self.weights) == 0
-        assert len(self.activation_f) == 0
-        assert len(self.cache) == 0
-        assert len(self.activation_mode) == 0
+        assert self.weights == None
+        assert self.activation_f == None
+        assert self.cache == None
+        assert self.activation_mode == None
+        assert self.Z == None
+        assert self.dA == None
         np.random.seed(self.seed)
 
-        arc_list = [self.input_size] + self.arc
 
-        for inp, out in zip(arc_list[:-1], arc_list[1:]):
-            self.weights.append((np.random.normal(0, 1, size = (inp+1, out))*math.sqrt(2/(inp+31+out))).astype(np.float32()))
-            self.activation_f.append(get_act_func(self.intermediate_activation_mode))
-            self.activation_mode.append(self.intermediate_activation_mode)
+
+        arc_list = [self.input_size] + self.arc
+        
+        self.weights = [ None for _ in range(len(arc_list)) ]
+        self.activation_f = [ None for _ in range(len(arc_list)) ]
+        self.activation_mode = [ None for _ in range(len(arc_list)) ]
+        self.cache = [ None for _ in range(len(arc_list)) ]
+        self.Z = [ None for _ in range(len(arc_list)) ]
+        self.dA = [ None for _ in range(len(arc_list)) ]
+
+        for i, (inp, out) in enumerate(zip(arc_list[:-1], arc_list[1:])):
+            self.weights[i +1] = (np.random.normal(0, 1, size = (inp+1, out))*math.sqrt(2/(inp+31+out))).astype(np.float32())
+            self.activation_f[i +1] = get_act_func(self.intermediate_activation_mode)
+            self.activation_mode[i +1] = self.intermediate_activation_mode
 
         # we have aded an extra activation in the last layer 
         # that needs to be changed to required activation
@@ -169,22 +169,27 @@ class NNet:
         self.activation_f[-1] = get_act_func(self.final_activation_mode)
         self.activation_mode[-1] = self.final_activation_mode
 
-        self.cache = [ None for _ in range(len(self.activation_mode)) ]
 
         print("INFO: Weights Initialized")
 
 
     def train(self, X_train, Y_train):
         bs = self.bs
-        epoch = self.epoch
-        for t in range(1,epoch + 1):
+        self.current_epoch = 1
+        pbar = tqdm(total=self.epoch)
+        while(self.current_epoch <= self.epoch):
+        # for t in range(1,epoch + 1):
             for batch in range((X_train.shape[0]-1)//bs + 1):
                 if(X_train[batch*bs:batch*bs + bs, :].shape[0]!= bs):
                     # import pdb; pdb.set_trace()
                     pass
                 else:
-                    Y_hat_train = self.forward(X_train[batch*bs:batch*bs + bs, :])
-                    self.backward(Y_hat_train)
+                    self.forward(X_train[batch*bs:batch*bs + bs, :])
+                    import pdb; pdb.set_trace()
+                    self.backward(Y_train[batch*bs:batch*bs + bs, :])
+            
+            self.current_epoch += 1
+            pbar.update()
 
     def bias_transform(self, X):
         # x = [b, n_feat]
@@ -195,15 +200,55 @@ class NNet:
 
     def forward(self, X_train):
         X = X_train  
-        for i , (weight, activation_func, activation_mode) in enumerate(zip(self.weights, self.activation_f, self.activation_mode)):
+        self.Z[0] = X
+        for i , (weight, activation_func, activation_mode) in enumerate(zip(self.weights[1:], self.activation_f[1:], self.activation_mode[1:])):
             X = self.bias_transform(X)
+            # import pdb; pdb.set_trace()
             X = np.matmul(X, weight)
             X, derivative = activation_func(X)
-            self.cache[i] = derivative
+            self.Z[i + 1] = X
+            self.cache[i + 1] = derivative
 
-    def backward(self, Y_hat_train):
+    def backward(self, Y_train):
+        # Assert that CE loss is used with softmax activation
+        if(self.loss_mode == 0):
+            assert self.final_activation_mode == 3
+            self.dA[-1] = (self.Z[-1] - Y_train)/Y_train.shape[0]
+
+        # Assert that MSE loss is NOT used with softmax activation because it makes things trickier
+        elif(self.loss_mode == 1):
+            assert self.final_activation_mode != 3
+            self.dA[-1] = ((self.Z[-1] - Y_train)/Y_train.shape[0])*self.cache[-1]
+
+        l = len(self.dA) - 2
+        while(l>= 1):
+            self.dA[l] = np.matmul(self.dA[l+1], self.weights[l+1])*self.cache[l-1]
+
+            l-=1
+        
+        l = len(self.dA) - 1
+        while(l>= 1):
+            dw_l  = np.matmul(self.Z[l-1].T, self.dA[l])
+            lr = self.get_lr()
+            self.weights[l] -= lr*dw_l 
+            l-=1
         pass
 
+
+    def get_lr(self):
+        if(self.lr_mode == 0):
+            return self.lr
+        else:
+            return self.lr/(math.sqrt(self.current_epoch))
+            
+def one_hot(X, num_classes):
+    # X shape : (n, )
+    # import pdb; pdb.set_trace()
+    Y = np.zeros((X.shape[0], num_classes))
+    rows = np.arange(X.shape[0])
+    Y[rows, X.tolist()] = 1
+
+    return Y
 
 def main(args):
     input_path, out_path, param_file = args[1:]
@@ -215,6 +260,9 @@ def main(args):
     assert X_train.shape[1] == X_test.shape[1]
 
     model = NNet(input_size= 200, param_dict=param_dict)
+    num_classes = model.num_classes
+
+    Y_train = one_hot(Y_train, num_classes)
     model.train(X_train, Y_train)
 
 
