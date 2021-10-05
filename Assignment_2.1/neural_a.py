@@ -2,9 +2,10 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+import math
 # from sklearn.preprocessing import PolynomialFeatures
 # from sklearn.preprocessing import OneHotEncoder
-# from scipy.special import softmax
+from scipy.special import softmax
 
 # from tqdm import tqdm
 
@@ -66,9 +67,143 @@ def get_param_dict(param_file):
     print(return_dict)
     return return_dict
 
-def get_model(param_dict):
-    weights_activation_list = []
-    pass
+def get_lr_func(mode):
+    def const_lr(lr, **kwargs):
+        return lr
+    def adaptive_lr(lr, epoch, **kwargs):
+        return lr/((epoch)**0.5)
+
+    if(mode == 0):
+        return const_lr
+    else:
+        return adaptive_lr
+
+def get_act_func(mode):
+    def log_sigmoid(A):
+        # return the activation and the cache derivative
+        f = 1/(1+ np.exp(-A))
+        return np.log(f), 1-f
+    def tanh(A):
+        # return the activation and the cache derivative
+        f = np.tanh(A)
+        return f, 1-np.square(f)
+    def relu(A):
+        # return the activation and the cache derivative
+        B = np.array(A)
+        C = np.array(A)
+        B[B<0] = 0
+        C[C<0] = 0
+        C[C==0] = 0
+        C[C>0] = 1
+
+        return B, C
+    def softmax(A):
+        # return the activation and the cache derivative
+        exp = np.exp(A)
+        sum = exp.sum(axis = 1, keepdims = True)
+        return exp/sum, None
+
+    if(mode == 0):
+        return log_sigmoid
+    elif(mode == 1):
+        return tanh
+    elif(mode == 2):
+        return relu
+    elif(mode == 3):
+        return softmax
+
+def get_derivative_func(mode):
+    def der_log_sigmoid(A):
+        return np.log(1/(1+ np.exp(-A)))
+    def der_tanh(A):
+        return np.tanh(A)
+    def der_relu(A):
+        B = np.array(A)
+        B[B<0] = 0
+        return B
+
+    if(mode == 0):
+        return der_log_sigmoid
+    elif(mode == 1):
+        return der_tanh
+    else:
+        return der_relu
+
+class NNet:
+    def __init__(self, input_size, param_dict, output_act_mode = 3):
+        self.input_size = input_size
+
+        self.weights = []
+        self.activation_f = []
+        self.activation_mode = []
+        self.cache = []
+
+        self.seed = param_dict["seed"]
+        self.arc = param_dict["arc"]
+        self.intermediate_activation_mode = param_dict["f_act"]
+        self.bs = param_dict["bs"]
+        self.epoch = param_dict["epoch"]
+
+        self.final_activation_mode = output_act_mode 
+
+        self.initialise_weights()
+    
+    def initialise_weights(self):
+        assert len(self.weights) == 0
+        assert len(self.activation_f) == 0
+        assert len(self.cache) == 0
+        assert len(self.activation_mode) == 0
+        np.random.seed(self.seed)
+
+        arc_list = [self.input_size] + self.arc
+
+        for inp, out in zip(arc_list[:-1], arc_list[1:]):
+            self.weights.append((np.random.normal(0, 1, size = (inp+1, out))*math.sqrt(2/(inp+31+out))).astype(np.float32()))
+            self.activation_f.append(get_act_func(self.intermediate_activation_mode))
+            self.activation_mode.append(self.intermediate_activation_mode)
+
+        # we have aded an extra activation in the last layer 
+        # that needs to be changed to required activation
+
+        # Changes for the final layer are made
+        self.activation_f[-1] = get_act_func(self.final_activation_mode)
+        self.activation_mode[-1] = self.final_activation_mode
+
+        self.cache = [ None for _ in range(len(self.activation_mode)) ]
+
+        print("INFO: Weights Initialized")
+
+
+    def train(self, X_train, Y_train):
+        bs = self.bs
+        epoch = self.epoch
+        for t in range(1,epoch + 1):
+            for batch in range((X_train.shape[0]-1)//bs + 1):
+                if(X_train[batch*bs:batch*bs + bs, :].shape[0]!= bs):
+                    # import pdb; pdb.set_trace()
+                    pass
+                else:
+                    Y_hat_train = self.forward(X_train[batch*bs:batch*bs + bs, :])
+                    self.backward(Y_hat_train)
+
+    def bias_transform(self, X):
+        # x = [b, n_feat]
+        # import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
+        # print(X.shape)
+        return np.concatenate((np.ones((X.shape[0], 1)), X), axis = 1)
+
+    def forward(self, X_train):
+        X = X_train  
+        for i , (weight, activation_func, activation_mode) in enumerate(zip(self.weights, self.activation_f, self.activation_mode)):
+            X = self.bias_transform(X)
+            X = np.matmul(X, weight)
+            X, derivative = activation_func(X)
+            self.cache[i] = derivative
+
+    def backward(self, Y_hat_train):
+        pass
+
 
 def main(args):
     input_path, out_path, param_file = args[1:]
@@ -78,6 +213,9 @@ def main(args):
 
     assert X_train.shape[0] == Y_train.shape[0]
     assert X_train.shape[1] == X_test.shape[1]
+
+    model = NNet(input_size= 200, param_dict=param_dict)
+    model.train(X_train, Y_train)
 
 
 
