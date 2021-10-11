@@ -5,7 +5,7 @@ import numpy as np
 import math
 # from sklearn.preprocessing import PolynomialFeatures
 # from sklearn.preprocessing import OneHotEncoder
-from tqdm import tqdm
+# from tqdm import tqdm
 # TODO remove tqdm dependencies
 # class_num_dict_tmp = [['Health Service Area', 8], ['Hospital County', 57], ['Facility Name', 212], ['Age Group', 5], ['Zip Code - 3 digits', 50], ['Gender', 3], ['Race', 4], ['Ethnicity', 4], ['Type of Admission', 6], ['Patient Disposition', 19], ['CCS Diagnosis Description', 260], ['CCS Procedure Description', 224], ['APR DRG Description', 308], ['APR MDC Description', 24], ['APR Severity of Illness Description', 4], ['APR Risk of Mortality', 4], ['APR Medical Surgical Description', 2], ['Payment Typology 1', 10], ['Payment Typology 2', 11], ['Payment Typology 3', 11], ['Emergency Department Indicator', 2]]
 def load_data(input_file):
