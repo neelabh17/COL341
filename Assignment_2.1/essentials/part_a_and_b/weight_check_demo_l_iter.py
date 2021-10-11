@@ -5,10 +5,10 @@ import numpy as np
 
 path = sys.argv[1]
 files = os.listdir(path)
-# r1=re.compile("w_._iter\.npy")#use w_._iter\.npy for weights after iteration
-# r2=re.compile("ac_w_._iter\.npy")#use ac_w_._iter\.npy for weights after iteration
-r1=re.compile("w_.\.npy")#use w_._iter\.npy for weights after iteration
-r2=re.compile("ac_w_.\.npy")#use ac_w_._iter\.npy for weights after iteration
+r1=re.compile("w_._iter\.npy")#use w_._iter\.npy for weights after iteration
+r2=re.compile("ac_w_._iter\.npy")#use ac_w_._iter\.npy for weights after iteration
+# r1=re.compile("w_.\.npy")#use w_._iter\.npy for weights after iteration
+# r2=re.compile("ac_w_.\.npy")#use ac_w_._iter\.npy for weights after iteration
 obtained_weights = list(filter(r1.match,files))
 actual_weights = list(filter(r2.match,files))
 obtained_weights.sort()

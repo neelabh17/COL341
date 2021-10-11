@@ -15,9 +15,9 @@ def load_data(input_file):
     test_file_name = "toy_dataset_test.csv"
     test_file = os.path.join(input_file, test_file_name)
 
-    train = pd.read_csv(train_file)    
+    train = pd.read_csv(train_file, header = None)    
     # removes does not remove first column 
-    test = pd.read_csv(test_file, index_col = 0)
+    test = pd.read_csv(test_file, index_col = 0, header = None)
 
     train = np.array(train)  
     Y_train = train[:,0]
@@ -27,7 +27,7 @@ def load_data(input_file):
 
     # import pdb; pdb.set_trace()
 
-    return X_train, Y_train, X_test
+    return X_train/255, Y_train, X_test/255
 def get_param_dict(param_file):
 
     return_dict = {"epoch": None,
@@ -63,7 +63,7 @@ def get_param_dict(param_file):
         return_dict["seed"] = seed
         
 
-    print(return_dict)
+    # print(return_dict)
     return return_dict
 
 def get_lr_func(mode):
@@ -81,11 +81,17 @@ def get_act_func(mode):
     def log_sigmoid(A):
         # return the activation and the cache derivative
         f = 1/(1+ np.exp(-A))
-        return f, f*(1-f)
+        der = f*(1-f)
+        # der = np.concatenate((der, np.zeros((der.shape[0], 1))), axis = 1)
+
+        return f, der
     def tanh(A):
         # return the activation and the cache derivative
         f = np.tanh(A)
-        return f, 1-np.square(f)
+        der = 1-np.square(f) 
+        # der = np.concatenate((der, np.zeros((der.shape[0], 1))), axis = 1)
+
+        return f, der
     def relu(A):
         # return the activation and the cache derivative
         B = np.array(A)
@@ -94,8 +100,9 @@ def get_act_func(mode):
         C[C<0] = 0
         C[C==0] = 0
         C[C>0] = 1
-
-        return B, C
+        der = C
+        # der = np.concatenate((der, np.zeros((der.shape[0], 1))), axis = 1)
+        return B, der
     def softmax(A):
         # return the activation and the cache derivative
         exp = np.exp(A)
@@ -112,8 +119,9 @@ def get_act_func(mode):
         return softmax
 
 class NNet:
-    def __init__(self, input_size, param_dict, output_act_mode = 3):
+    def __init__(self, input_size, param_dict, out_path, output_act_mode = 3):
         self.input_size = input_size
+        self.out_path = out_path
 
         self.weights = None
         self.activation_f = None
@@ -122,6 +130,7 @@ class NNet:
         self.Z = None
         self.dA = None
         self.current_epoch = None
+        
 
         self.seed = param_dict["seed"]
         self.arc = param_dict["arc"]
@@ -130,12 +139,20 @@ class NNet:
         self.epoch = param_dict["epoch"]
         self.loss_mode = param_dict["loss"]
         self.lr_mode = param_dict["lr_mode"]
-        self.lr_mode = param_dict["lr"]
+        self.lr = param_dict["lr"]
         self.num_classes = self.arc[-1]
 
         self.final_activation_mode = output_act_mode 
 
         self.initialise_weights()
+    def save_weights(self):
+        # print("INFO: Saving weights")
+        for i, weight in enumerate(self.weights[1:]):
+            np.save(os.path.join(self.out_path,"w_{}.npy".format(i+1)),weight)
+    def save_weights_iter(self):
+        # print("INFO: Saving weights")
+        for i, weight in enumerate(self.weights[1:]):
+            np.save(os.path.join(self.out_path,"w_{}_iter.npy".format(i+1)),weight)
     
     def initialise_weights(self):
         assert self.weights == None
@@ -158,9 +175,12 @@ class NNet:
         self.dA = [ None for _ in range(len(arc_list)) ]
 
         for i, (inp, out) in enumerate(zip(arc_list[:-1], arc_list[1:])):
-            self.weights[i +1] = (np.random.normal(0, 1, size = (inp+1, out))*math.sqrt(2/(inp+31+out))).astype(np.float32())
-            self.activation_f[i +1] = get_act_func(self.intermediate_activation_mode)
-            self.activation_mode[i +1] = self.intermediate_activation_mode
+            # import pdb;pdb.set_trace()
+            # self.weights[i + 1] = np.float32(np.random.normal(0, 1, size = (inp+1, out))*math.sqrt(2/(inp+1+out)))
+            self.weights[i + 1] = np.float64((np.random.normal(0, 1, size = (inp+1, out))*math.sqrt(2/(inp+1+out))).astype(np.float32()))
+            # self.weights[i + 1] = (np.random.normal(0, 1, size = (inp+1, out))*math.sqrt(2/(inp+1+out))).astype(np.float32())
+            self.activation_f[i + 1] = get_act_func(self.intermediate_activation_mode)
+            self.activation_mode[i + 1] = self.intermediate_activation_mode
 
         # we have aded an extra activation in the last layer 
         # that needs to be changed to required activation
@@ -170,13 +190,13 @@ class NNet:
         self.activation_mode[-1] = self.final_activation_mode
 
 
-        print("INFO: Weights Initialized")
+        # print("INFO: Weights Initialized")
 
 
     def train(self, X_train, Y_train):
         bs = self.bs
         self.current_epoch = 1
-        pbar = tqdm(total=self.epoch)
+        # pbar = tqdm(total=self.epoch)
         while(self.current_epoch <= self.epoch):
         # for t in range(1,epoch + 1):
             for batch in range((X_train.shape[0]-1)//bs + 1):
@@ -185,11 +205,16 @@ class NNet:
                     pass
                 else:
                     self.forward(X_train[batch*bs:batch*bs + bs, :])
-                    import pdb; pdb.set_trace()
+                    # import pdb; pdb.set_trace()
                     self.backward(Y_train[batch*bs:batch*bs + bs, :])
+                    if(batch + 1  == 5 and self.current_epoch == 1):
+                        self.save_weights_iter()
+
             
+            # if(self.current_epoch == 5):
+            #     self.save_weights()
             self.current_epoch += 1
-            pbar.update()
+            # pbar.update()
 
     def bias_transform(self, X):
         # x = [b, n_feat]
@@ -200,14 +225,17 @@ class NNet:
 
     def forward(self, X_train):
         X = X_train  
-        self.Z[0] = X
         for i , (weight, activation_func, activation_mode) in enumerate(zip(self.weights[1:], self.activation_f[1:], self.activation_mode[1:])):
             X = self.bias_transform(X)
+            self.Z[i] = X
             # import pdb; pdb.set_trace()
-            X = np.matmul(X, weight)
+            X = np.dot(X, weight)
             X, derivative = activation_func(X)
-            self.Z[i + 1] = X
+            # self.Z[i + 1] = X
             self.cache[i + 1] = derivative
+        
+        # might be wrong
+        self.Z[-1] = X
 
     def backward(self, Y_train):
         # Assert that CE loss is used with softmax activation
@@ -222,13 +250,14 @@ class NNet:
 
         l = len(self.dA) - 2
         while(l>= 1):
-            self.dA[l] = np.matmul(self.dA[l+1], self.weights[l+1])*self.cache[l-1]
+            # import pdb; pdb.set_trace()
+            self.dA[l] = np.dot(self.dA[l+1], self.weights[l+1].T)[:,1:]*self.cache[l]
 
             l-=1
         
         l = len(self.dA) - 1
         while(l>= 1):
-            dw_l  = np.matmul(self.Z[l-1].T, self.dA[l])
+            dw_l  = np.dot(self.Z[l-1].T, self.dA[l])
             lr = self.get_lr()
             self.weights[l] -= lr*dw_l 
             l-=1
@@ -240,6 +269,19 @@ class NNet:
             return self.lr
         else:
             return self.lr/(math.sqrt(self.current_epoch))
+
+    def eval(self, X_test):
+        X = X_test  
+        for _ , (weight, activation_func, activation_mode) in enumerate(zip(self.weights[1:], self.activation_f[1:], self.activation_mode[1:])):
+            X = self.bias_transform(X)
+            # import pdb; pdb.set_trace()
+            X = np.dot(X, weight)
+            X, _ = activation_func(X)
+            # self.Z[i + 1] = X
+
+        return X.argmax(axis = 1)
+
+
             
 def one_hot(X, num_classes):
     # X shape : (n, )
@@ -259,19 +301,16 @@ def main(args):
     assert X_train.shape[0] == Y_train.shape[0]
     assert X_train.shape[1] == X_test.shape[1]
 
-    model = NNet(input_size= 200, param_dict=param_dict)
+    model = NNet(input_size = 200, param_dict=param_dict, out_path=out_path)
     num_classes = model.num_classes
 
     Y_train = one_hot(Y_train, num_classes)
     model.train(X_train, Y_train)
+    model.save_weights()
 
-
-
-
-
-
-
-    
+    Y_pred = model.eval(X_test)
+    np.save(os.path.join(out_path,"predictions.npy"), Y_pred)
+     
 
 if __name__ == "__main__":
     args = sys.argv
