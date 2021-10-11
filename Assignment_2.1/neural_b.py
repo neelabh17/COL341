@@ -213,8 +213,8 @@ class NNet:
                     self.forward(X_train[batch*bs:batch*bs + bs, :])
                     # import pdb; pdb.set_trace()
                     self.backward(Y_train[batch*bs:batch*bs + bs, :])
-                    if(batch + 1  == 5 and self.current_epoch == 1):
-                        self.save_weights_iter()
+                    # if(batch + 1  == 5 and self.current_epoch == 1):
+                    #     self.save_weights_iter()
 
             
             # if(self.current_epoch == 5):
