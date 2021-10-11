@@ -9,25 +9,27 @@ from tqdm import tqdm
 # TODO remove tqdm dependencies
 # class_num_dict_tmp = [['Health Service Area', 8], ['Hospital County', 57], ['Facility Name', 212], ['Age Group', 5], ['Zip Code - 3 digits', 50], ['Gender', 3], ['Race', 4], ['Ethnicity', 4], ['Type of Admission', 6], ['Patient Disposition', 19], ['CCS Diagnosis Description', 260], ['CCS Procedure Description', 224], ['APR DRG Description', 308], ['APR MDC Description', 24], ['APR Severity of Illness Description', 4], ['APR Risk of Mortality', 4], ['APR Medical Surgical Description', 2], ['Payment Typology 1', 10], ['Payment Typology 2', 11], ['Payment Typology 3', 11], ['Emergency Department Indicator', 2]]
 def load_data(input_file):
-    train_file_name = "toy_dataset_train.csv"
+    train_file_name = "train_data_shuffled.csv"
     train_file = os.path.join(input_file, train_file_name)
 
-    test_file_name = "toy_dataset_test.csv"
+    test_file_name = "public_test.csv"
     test_file = os.path.join(input_file, test_file_name)
 
+    # import pdb; pdb.set_trace()
     train = pd.read_csv(train_file, header = None)    
-    # removes does not remove first column 
-    test = pd.read_csv(test_file, index_col = 0, header = None)
+    test = pd.read_csv(test_file, header = None)
 
     train = np.array(train)  
-    Y_train = train[:,0]
+    Y_train = train[:,-1]
+    X_train = train[:, :-1]
+    
+    test = np.array(test)  
+    Y_test = test[:,-1]
+    X_test = test[:, :-1]
 
-    X_train = train[:, 1:]
-    X_test = np.array(test)
 
-    # import pdb; pdb.set_trace()
 
-    return X_train/255, Y_train, X_test/255
+    return X_train/255, Y_train, X_test/255, Y_test
 def get_param_dict(param_file):
 
     return_dict = {"epoch": None,
@@ -119,7 +121,7 @@ def get_act_func(mode):
         return softmax
 
 class NNet:
-    def __init__(self, input_size, param_dict, out_path, output_act_mode = 3):
+    def __init__(self, input_size, param_dict, out_path):
         self.input_size = input_size
         self.out_path = out_path
 
@@ -142,7 +144,11 @@ class NNet:
         self.lr = param_dict["lr"]
         self.num_classes = self.arc[-1]
 
-        self.final_activation_mode = output_act_mode 
+        if(self.loss_mode == 0):
+            self.final_activation_mode = 3
+        else:
+            self.final_activation_mode = self.intermediate_activation_mode
+
 
         self.initialise_weights()
     def save_weights(self):
@@ -296,12 +302,12 @@ def main(args):
     input_path, out_path, param_file = args[1:]
     param_dict = get_param_dict(param_file)
 
-    X_train, Y_train, X_test = load_data(input_path)
+    X_train, Y_train, X_test, Y_test = load_data(input_path)
 
     assert X_train.shape[0] == Y_train.shape[0]
     assert X_train.shape[1] == X_test.shape[1]
 
-    model = NNet(input_size = 200, param_dict=param_dict, out_path=out_path)
+    model = NNet(input_size = 1024, param_dict=param_dict, out_path=out_path)
     num_classes = model.num_classes
 
     Y_train = one_hot(Y_train, num_classes)
