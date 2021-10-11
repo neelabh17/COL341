@@ -119,7 +119,7 @@ def get_act_func(mode):
         return softmax
 
 class NNet:
-    def __init__(self, input_size, param_dict, out_path, output_act_mode = 3):
+    def __init__(self, input_size, param_dict, out_path):
         self.input_size = input_size
         self.out_path = out_path
 
@@ -142,7 +142,10 @@ class NNet:
         self.lr = param_dict["lr"]
         self.num_classes = self.arc[-1]
 
-        self.final_activation_mode = output_act_mode 
+        if(self.loss_mode == 0):
+            self.final_activation_mode = 3
+        else:
+            self.final_activation_mode = self.intermediate_activation_mode
 
         self.initialise_weights()
     def save_weights(self):
