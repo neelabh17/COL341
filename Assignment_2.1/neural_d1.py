@@ -314,18 +314,18 @@ def main(args):
 
     Y_train = one_hot(Y_train, num_classes)
     model.train(X_train, Y_train)
-    model.save_weights()
+    # model.save_weights()
 
-    with open(os.path.join(out_path, "my_params.txt"), "w") as f:
-        f.write(str(param_dict["epoch"]) + "\n")
-        f.write(str(param_dict["bs"]) + "\n")
-        f.write(str(param_dict["lr_mode"]) + "\n")
-        f.write(str(param_dict["lr"]) + "\n")
-        f.write(str(param_dict["f_act"]) + "\n")
-        f.write(str(param_dict["loss"]) + "\n")
-        f.write(str(param_dict["optim"]) + "\n")
-        f.write(str(param_dict["arc"]) + "\n")
-        f.write(str(param_dict["seed"]) + "\n")
+    # with open(os.path.join(out_path, "my_params.txt"), "w") as f:
+    #     f.write(str(param_dict["epoch"]) + "\n")
+    #     f.write(str(param_dict["bs"]) + "\n")
+    #     f.write(str(param_dict["lr_mode"]) + "\n")
+    #     f.write(str(param_dict["lr"]) + "\n")
+    #     f.write(str(param_dict["f_act"]) + "\n")
+    #     f.write(str(param_dict["loss"]) + "\n")
+    #     f.write(str(param_dict["optim"]) + "\n")
+    #     f.write(str(param_dict["arc"]) + "\n")
+    #     f.write(str(param_dict["seed"]) + "\n")
 
 
 
