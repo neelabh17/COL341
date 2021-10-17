@@ -7,16 +7,16 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import sys
 
-from skimage import io, transform
+# from skimage import io, transform
 
 import matplotlib.pyplot as plt # for plotting
 import numpy as np
 import pandas as pd
 import glob
 import os
-from tqdm import tqdm
+# from tqdm import tqdm
 
-from IPython.display import Image
+# from IPython.display import Image
 import cv2
 
 # DataLoader Class
@@ -49,7 +49,7 @@ class ImageDataset(Dataset):
         
         self.images = images
         self.labels = labels
-        print("Total Images: {}, Data Shape = {}".format(len(self.images), images.shape))
+        # print("Total Images: {}, Data Shape = {}".format(len(self.images), images.shape))
         
     def __len__(self):
         """Returns total number of samples in the dataset"""
@@ -156,7 +156,7 @@ def main(args):
     torch.manual_seed(51)
     model = NNet()
 
-    print("Parmas = ", sum(p.numel() for p in model.parameters())/10**6, "M" )
+    # print("Parmas = ", sum(p.numel() for p in model.parameters())/10**6, "M" )
     optim = torch.optim.Adam(model.parameters(), lr = 1e-4)
 
     if(torch.cuda.is_available()):
@@ -172,7 +172,8 @@ def main(args):
         # Enumeration for 1 epoch
         total_loss = 0.0
         model.train()
-        for sample in tqdm(train_loader, desc="Training"):
+        # for sample in tqdm(train_loader, desc="Training"):
+        for sample in train_loader:
             images = sample['images']
             labels = sample['labels']
 
@@ -221,7 +222,7 @@ def main(args):
         plt.savefig("train_loss.png")
         torch.save(model.state_dict(), model_file)
 
-        print(total_loss/len(train_loader), acc)
+        # print(total_loss/len(train_loader), acc)
         # print(total_loss/len(train_loader), acc, acc_tr)
 
         # print()
@@ -235,7 +236,7 @@ def eval(model, test_loader, give_pred = False):
         model.eval()
         correct = 0
         tots = 0
-        for sample in tqdm(test_loader, desc="Evaluating"):
+        for sample in test_loader:
             images = sample['images']
             labels = sample['labels']
 

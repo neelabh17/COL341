@@ -6,22 +6,21 @@ import torchvision
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import sys
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import StepLR
 
-from skimage import io, transform
+# from skimage import io, transform
 
 import matplotlib.pyplot as plt # for plotting
 import numpy as np
 import pandas as pd
 import glob
 import os
-from tqdm import tqdm
+# from tqdm import tqdm
 
-from IPython.display import Image
+# from IPython.display import Image
 import cv2
 
-from models import BasicNNet
 
 # DataLoader Class
 # if BATCH_SIZE = N, dataloader returns images tensor of size [N, C, H, W] and labels [N]
@@ -53,7 +52,7 @@ class ImageDataset(Dataset):
         
         self.images = images
         self.labels = labels
-        print("Total Images: {}, Data Shape = {}".format(len(self.images), images.shape))
+        # print("Total Images: {}, Data Shape = {}".format(len(self.images), images.shape))
         
     def __len__(self):
         """Returns total number of samples in the dataset"""
@@ -82,17 +81,69 @@ class ImageDataset(Dataset):
         sample = {"images": image, "labels": label}
         return sample
 
+class BasicNNet(nn.Module):
+    '''
+    2.679178 M parameters
+    '''
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.conv3 = nn.Conv2d(64, 512, kernel_size=3, stride=1)
+        self.bn3 = nn.BatchNorm2d(512)
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.conv4 = nn.Conv2d(512, 1024, kernel_size=2, stride=1)
+
+        self.fc1 = nn.Linear(1024, 256)
+
+        self.dropout = nn.Dropout(0.2)
+
+        self.fc2 = nn.Linear(256, 10)
+
+        self.relu = nn.ReLU()
+    
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.pool1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+        x = self.pool2(x)
+        x = self.conv3(x)
+        x = self.bn3(x)
+        x = self.relu(x)
+        x = self.pool3(x)
+        x = self.conv4(x)
+        x = self.relu(x)
+
+        x = self.fc1(x.squeeze(2).squeeze(2))
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
+
 def main(args):
-    train_file, test_file, model_file, loss_file, acc_file, run_name = args[1:]
+    train_file, test_file, model_file, loss_file, acc_file = args[1:]
+    # train_file, test_file, model_file, loss_file, acc_file, run_name = args[1:]
     # Data Loader Usage
 
-    writer = SummaryWriter(comment=run_name)
+    # writer = SummaryWriter(comment=run_name)
 
     BATCH_SIZE = 200 # Batch Size. Adjust accordingly
     NUM_WORKERS = 20 # Number of threads to be used for image loading. Adjust accordingly.
-    EPOCH = 50
-    LR = 1e-4
+    EPOCH = 100
+    LR = 1e-3
 
+    # img_transforms = transforms.Compose([transforms.ToPILImage(),transforms.Resize(224),transforms.ToTensor()])
     img_transforms = transforms.Compose([transforms.ToPILImage(),transforms.ToTensor()])
 
     # Train DataLoader
@@ -110,9 +161,10 @@ def main(args):
     torch.manual_seed(51)
     model = BasicNNet()
 
-    print("Parmas = ", sum(p.numel() for p in model.parameters())/10**6, "M" )
+    # print("Parmas = ", sum(p.numel() for p in model.parameters())/10**6, "M" )
     optim = torch.optim.Adam(model.parameters(), lr = LR)
-    scheduler = StepLR(optim, step_size=30, gamma=0.1)
+    scheduler = StepLR(optim, step_size=40, gamma=0.1)
+    max_acc = 0
 
     if(torch.cuda.is_available()):
         model = model.cuda()
@@ -127,7 +179,7 @@ def main(args):
         # Enumeration for 1 epoch
         total_loss = 0.0
         model.train()
-        for sample in tqdm(train_loader, desc="Training Epoch:{}".format(ep+1)):
+        for sample in train_loader:
             images = sample['images']
             labels = sample['labels']
 
@@ -153,35 +205,39 @@ def main(args):
         acc, _ = eval(model, test_loader)
         # acc_tr, _ = eval(model, train_loader)
         test_acc.append(acc)
-        writer.add_scalar("Test Accuracy", acc, ep)
-        writer.add_scalar("Train Loss", avg_loss, ep)
+        # writer.add_scalar("Test Accuracy", acc, ep)
+        # writer.add_scalar("Train Loss", avg_loss, ep)
         # writer.flush()
         
-        # with open(acc_file, "w") as f:
-        #     for accu in test_acc:
-        #         f.write(str(accu)+"\n")
+        with open(acc_file, "w") as f:
+            for accu in test_acc:
+                f.write(str(accu)+"\n")
 
-        # plt.clf()
-        # plt.rcParams["font.family"] = "serif"
-        # plt.plot( [i+1 for i in range(len(test_acc))], test_acc)
-        # plt.title("Test Accuracy vs Epoch")
-        # plt.xlabel("Epoch")
-        # plt.ylabel("Test Accuracy")
-        # plt.savefig("test_acc.png")
+        plt.clf()
+        plt.rcParams["font.family"] = "serif"
+        plt.plot( [i+1 for i in range(len(test_acc))], test_acc)
+        plt.title("Test Accuracy vs Epoch")
+        plt.xlabel("Epoch")
+        plt.ylabel("Test Accuracy")
+        plt.savefig("test_acc.png")
 
-        # with open(loss_file, "w") as f:
-        #     for avg_l in avg_losses:
-        #         f.write(str(avg_l)+"\n")
-        # plt.clf()
-        # plt.rcParams["font.family"] = "serif"
-        # plt.plot([i+1 for i in range(len(avg_losses))], avg_losses)
-        # plt.title("Train loss vs Epoch")
-        # plt.xlabel("Epoch")
-        # plt.ylabel("Train Loss")
-        # plt.savefig("train_loss.png")
-        # torch.save(model.state_dict(), model_file)
+        with open(loss_file, "w") as f:
+            for avg_l in avg_losses:
+                f.write(str(avg_l)+"\n")
+        plt.clf()
+        plt.rcParams["font.family"] = "serif"
+        plt.plot([i+1 for i in range(len(avg_losses))], avg_losses)
+        plt.title("Train loss vs Epoch")
+        plt.xlabel("Epoch")
+        plt.ylabel("Train Loss")
+        plt.savefig("train_loss.png")
 
-        print(total_loss/len(train_loader), acc)
+        if(acc> max_acc):
+            torch.save(model.state_dict(), model_file)
+            # print("saving", acc, max_acc)
+            max_acc = acc
+
+        # print(total_loss/len(train_loader), acc)
         # print(total_loss/len(train_loader), acc, acc_tr)
 
         # print()
@@ -195,7 +251,7 @@ def eval(model, test_loader, give_pred = False):
         model.eval()
         correct = 0
         tots = 0
-        for sample in tqdm(test_loader, desc="Evaluating"):
+        for sample in test_loader:
             images = sample['images']
             labels = sample['labels']
 

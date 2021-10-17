@@ -1,4 +1,4 @@
-from numpy.lib.type_check import imag
+# from numpy.lib.type_check import imag
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,12 +6,12 @@ import torchvision
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
-from skimage import io, transform
+# from skimage import io, transform
 
 import matplotlib.pyplot as plt # for plotting
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+# from tqdm import tqdm
 # TODO remove TQDM dependencies
 
 import cv2
@@ -46,7 +46,7 @@ class DevanagariDataset(Dataset):
         
         self.images = images
         self.labels = labels
-        print("Total Images: {}, Data Shape = {}".format(len(self.images), images.shape))
+        # print("Total Images: {}, Data Shape = {}".format(len(self.images), images.shape))
         
     def __len__(self):
         """Returns total number of samples in the dataset"""
@@ -140,7 +140,7 @@ def main(args):
 
     # Test DataLoader
     test_data = test_file # Path to test csv file
-    test_dataset = DevanagariDataset(data_csv = test_data, train=True, img_transform=img_transforms)
+    test_dataset = DevanagariDataset(data_csv = test_data, train=False, img_transform=img_transforms)
     test_loader = DataLoader(test_dataset, batch_size = BATCH_SIZE, shuffle=False, num_workers = NUM_WORKERS)
 
     model = NNet()
@@ -149,7 +149,7 @@ def main(args):
     if(torch.cuda.is_available()):
         model = model.cuda()
 
-    print("Parmas = ", sum(p.numel() for p in model.parameters())/10**6, "M" )
+    # print("Parmas = ", sum(p.numel() for p in model.parameters())/10**6, "M" )
     _, preds = eval(model, test_loader, give_pred=True)
     with open(pred_file, "w") as f:
         for pred in preds.numpy().astype(np.int).tolist():
@@ -164,7 +164,8 @@ def eval(model, test_loader, give_pred = False):
         model.eval()
         correct = 0
         tots = 0
-        for sample in tqdm(test_loader, desc="Evaluating"):
+        # for sample in tqdm(test_loader, desc="Evaluating"):
+        for sample in test_loader:
             images = sample['images']
             labels = sample['labels']
 
