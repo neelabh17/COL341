@@ -1,2 +1,4 @@
 data/
 COL341-A2.2/
+__pycache__/
+runs/
