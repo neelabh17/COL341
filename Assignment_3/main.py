@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 import os
 import argparse
 
-from yoga_model import model1
+from yoga_model import model1, model2
 
 from models import *
 from utils import progress_bar
@@ -50,11 +50,11 @@ transform_val = transforms.Compose([
 
 trainset = YogaDataset("train",transform_train)
 trainloader = torch.utils.data.DataLoader(
-    trainset, batch_size=64, shuffle=True, num_workers=8)
+    trainset, batch_size=16, shuffle=True, num_workers=8)
 
 valset = YogaDataset("val",transform_val)
 valloader = torch.utils.data.DataLoader(
-    valset, batch_size=64, shuffle=True, num_workers=8)
+    valset, batch_size=16, shuffle=True, num_workers=8)
 
 classes = ['Virabhadrasana', 'Vrikshasana', 'Utkatasana', 'Padahastasana',
        'Katichakrasana', 'TriyakTadasana', 'Gorakshasana', 'Tadasana',
@@ -78,7 +78,7 @@ print('==> Building model..')
 # net = ShuffleNetV2(1)
 # net = EfficientNetB0()
 # net = RegNetX_200MF()
-net = model1()
+net = model2()
 net = net.to(device)
 
 # if device == 'cuda':
