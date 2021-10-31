@@ -46,7 +46,7 @@ class YogaDataset(Dataset):
         if(mode == "train" or mode == "val"):
             self.labels = np.asarray([class_name_to_id[class_name] for class_name in self.data["category"]])
         else:
-            self.labels = [None for _ in range(len(self.image_loc))]
+            self.labels = [-1 for _ in range(len(self.image_loc))]
 
         if(mode == "train"):
             self.labels = self.labels[:int(len(self.labels)*0.8)]
@@ -70,8 +70,9 @@ class YogaDataset(Dataset):
         # Return image and the label
 
         label = self.labels[index]
+        img_loc = self.image_loc[index]
         # Will be None for test set
-        return (img, label)
+        return (img, label, img_loc)
 
 
     def __len__(self):

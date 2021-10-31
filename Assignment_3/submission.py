@@ -7,21 +7,28 @@ import torch.backends.cudnn as cudnn
 
 import torchvision
 import torchvision.transforms as transforms
+from tqdm import tqdm
 
 import os
 import argparse
+
+import numpy as np
 
 from yoga_model import model1
 
 from models import *
 from utils import progress_bar
 
+import pandas as pd
+
 from dataloader import YogaDataset
 
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
-parser.add_argument('--resume', '-r', action='store_true',
+
+# TODO: Removal: In this case only has the resume tag been hardcoded
+parser.add_argument('--resume', '-r', action='store_true', default= "True",
                     help='resume from checkpoint')
 args = parser.parse_args()
 
@@ -48,13 +55,9 @@ transform_val = transforms.Compose([
     ])
 
 
-trainset = YogaDataset("train",transform_train)
-trainloader = torch.utils.data.DataLoader(
-    trainset, batch_size=64, shuffle=True, num_workers=8)
-
-valset = YogaDataset("val",transform_val)
-valloader = torch.utils.data.DataLoader(
-    valset, batch_size=64, shuffle=True, num_workers=8)
+testset = YogaDataset("test",transform_val)
+testloader = torch.utils.data.DataLoader(
+    testset, batch_size=1, shuffle=False, num_workers=8)
 
 classes = ['Virabhadrasana', 'Vrikshasana', 'Utkatasana', 'Padahastasana',
        'Katichakrasana', 'TriyakTadasana', 'Gorakshasana', 'Tadasana',
@@ -94,72 +97,37 @@ if args.resume:
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=args.lr,
-                      momentum=0.9, weight_decay=5e-4)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+
+net.eval()
+locs = []
+preds = []
+with torch.no_grad():
+    for batch_idx, (inputs, _, img_loc) in enumerate(tqdm(testloader)):
+        out = net(inputs.cuda())
+        out = out.argmax(dim = 1)
+        out = out.squeeze(0)
+        out = int(out.item())
+        
+        locs.append(img_loc)
+        preds.append(classes[out])
+        # import pdb; pdb.set_trace()
+
+locs = locs[:-1]
+preds = preds[:-1]
+
+locs = np.array(locs).reshape(-1, 1)
+preds = np.array(preds).reshape(-1, 1)
+data = np.concatenate((locs, preds), axis = 1)
+
+df = pd.DataFrame(data, columns = ["name","category"])
+df.to_csv("test.csv", index = False)
+# import pdb; pdb.set_trace()
 
 
-# Training
-def train(epoch):
-    print('\nEpoch: %d' % epoch)
-    net.train()
-    train_loss = 0
-    correct = 0
-    total = 0
-    for batch_idx, (inputs, targets, _) in enumerate(trainloader):
-        inputs, targets = inputs.to(device), targets.to(device)
-        optimizer.zero_grad()
-        outputs = net(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-
-        train_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
-
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                     % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 
-def test(epoch):
-    global best_acc
-    net.eval()
-    test_loss = 0
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for batch_idx, (inputs, targets, _) in enumerate(valloader):
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = net(inputs)
-            loss = criterion(outputs, targets)
-
-            test_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
-
-            progress_bar(batch_idx, len(valloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
-    # Save checkpoint.
-    acc = 100.*correct/total
-    if acc > best_acc:
-        print('Saving..')
-        state = {
-            'net': net.state_dict(),
-            'acc': acc,
-            'epoch': epoch,
-        }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        torch.save(state, './checkpoint/ckpt.pth')
-        best_acc = acc
 
 
-for epoch in range(start_epoch, start_epoch+200):
-    train(epoch)
-    test(epoch)
-    scheduler.step()
+
+
+
