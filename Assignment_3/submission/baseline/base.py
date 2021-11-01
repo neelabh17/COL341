@@ -14,10 +14,7 @@ import argparse
 
 from PIL import Image
 from tqdm import tqdm
-from yoga_model import model1
 
-
-DEVELOPMENT = False
 TRAIN = True
 
 class_list = ['Virabhadrasana', 'Vrikshasana', 'Utkatasana', 'Padahastasana',
@@ -158,23 +155,25 @@ class YogaDataset(Dataset):
             transform: pytorch transforms for transforms and tensor conversion
         """
         csv_path = path
-        if DEVELOPMENT:
-            if(mode == "train"):
-                csv_path = "data/training.csv"
-            elif (mode == "val"):
-                csv_path = "data/training.csv"
-            elif (mode == "test"):
-                csv_path = "data/test.csv"
-            else:
-                Logger("Wrong mode selected")
-                # print("INFO: Wrong mode selected")
-        else:
-            if mode != "train" and mode != "val" and mode != "test":
-                Logger("Wrong mode selected")
-                # print("INFO: Wrong mode selected")
+        # if DEVELOPMENT:
+        #     if(mode == "train"):
+        #         csv_path = "data/training.csv"
+        #     elif (mode == "val"):
+        #         csv_path = "data/training.csv"
+        #     elif (mode == "test"):
+        #         csv_path = "data/test.csv"
+        #     else:
+        #         Logger("Wrong mode selected")
+        #         # print("INFO: Wrong mode selected")
+        # else:
+        if mode != "train" and mode != "val" and mode != "test":
+            Logger("Wrong mode selected")
+            # print("INFO: Wrong mode selected")
 
         # TODO: FIX THE DATA_DIR THINGY
+        # self.data_dir should be the folder location of the train.csv
         self.data_dir = "data"
+
         self.data = pd.read_csv(csv_path)
         self.image_loc = np.asarray(self.data["name"])
         if(mode == "train" or mode == "val"):
@@ -215,7 +214,6 @@ class YogaDataset(Dataset):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description=f'| {"Training" if TRAIN else "Testing"} | COL341 | Aryan Gupta | Neelabh Madan |')
 
@@ -266,15 +264,15 @@ if __name__ == "__main__":
     testloader = None
 
     if TRAIN:
-        trainset = YogaDataset(args.tf, "train", transform_train)
+        trainset = YogaDataset(args.trainfolder, "train", transform_train)
         trainloader = torch.utils.data.DataLoader(
             trainset, batch_size=64, shuffle=True, num_workers=8)
 
-        valset = YogaDataset(args.tf, "val", transform_val)
+        valset = YogaDataset(args.trainfolder, "val", transform_val)
         valloader = torch.utils.data.DataLoader(
             valset, batch_size=64, shuffle=True, num_workers=8)
     else:
-        testset = YogaDataset(args.ti, "test", transform_train)
+        testset = YogaDataset(args.testinput, "test", transform_train)
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=1, shuffle=False, num_workers=8)
 
@@ -284,10 +282,11 @@ if __name__ == "__main__":
     if not TRAIN:
         Logger("Loading Model")
 
-        # checkpoint = torch.load('./checkpoint/ckpt.pth')
-        # net.load_state_dict(checkpoint['net'])
-        # best_acc = checkpoint['acc']
-        # start_epoch = checkpoint['epoch']
+        checkpoint = torch.load(args.modelpath)
+
+        net.load_state_dict(checkpoint['net'])
+        best_acc = checkpoint['acc']
+        start_epoch = checkpoint['epoch']
 
         Logger("Beginning test")
 
@@ -312,84 +311,79 @@ if __name__ == "__main__":
         data = np.concatenate((locs, preds), axis=1)
 
         df = pd.DataFrame(data, columns=["name", "category"])
-        df.to_csv(args.to, index=False)
+        df.to_csv(args.testoutput, index=False)
 
-        # TODO: VERIFY THIS
-        exit
-        # return
+    else:
+        EPOCHS = 25
+        Logger("Building Model")
+        # print('==> Building model..')
 
-    Logger("Building Model")
-    # print('==> Building model..')
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(net.parameters(), lr=0.01,
+                              momentum=0.9, weight_decay=5e-4)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=200)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.01,
-                          momentum=0.9, weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=200)
+        # Training
 
-    # Training
-
-    def train(epoch):
-        Logger('\nEpoch: %d' % epoch)
-        # print('\nEpoch: %d' % epoch)
-        net.train()
-        train_loss = 0
-        correct = 0
-        total = 0
-        for batch_idx, (inputs, targets, _) in enumerate(trainloader):
-            inputs, targets = inputs.to(device), targets.to(device)
-            optimizer.zero_grad()
-            outputs = net(inputs)
-            loss = criterion(outputs, targets)
-            loss.backward()
-            optimizer.step()
-
-            train_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
-
-            progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
-    def test(epoch):
-        global best_acc
-        net.eval()
-        test_loss = 0
-        correct = 0
-        total = 0
-        with torch.no_grad():
-            for batch_idx, (inputs, targets, _) in enumerate(valloader):
+        def train(epoch):
+            Logger('\nEpoch: %d' % epoch)
+            # print('\nEpoch: %d' % epoch)
+            net.train()
+            train_loss = 0
+            correct = 0
+            total = 0
+            for batch_idx, (inputs, targets, _) in enumerate(trainloader):
                 inputs, targets = inputs.to(device), targets.to(device)
+                optimizer.zero_grad()
                 outputs = net(inputs)
                 loss = criterion(outputs, targets)
+                loss.backward()
+                optimizer.step()
 
-                test_loss += loss.item()
+                train_loss += loss.item()
                 _, predicted = outputs.max(1)
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
 
-                progress_bar(batch_idx, len(valloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                             % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
-        # Save checkpoint.
-        acc = 100.*correct/total
-        if acc > best_acc:
-            Logger("Saving...")
-            # print('Saving..')
-            state = {
-                'net': net.state_dict(),
-                'acc': acc,
-                'epoch': epoch,
-            }
+        def test(epoch):
+            global best_acc
+            net.eval()
+            test_loss = 0
+            correct = 0
+            total = 0
+            with torch.no_grad():
+                for batch_idx, (inputs, targets, _) in enumerate(valloader):
+                    inputs, targets = inputs.to(device), targets.to(device)
+                    outputs = net(inputs)
+                    loss = criterion(outputs, targets)
 
-            # TODO: Update the save path here and save model weights
-            if not os.path.isdir('checkpoint'):
-                os.mkdir('checkpoint')
-            torch.save(state, './checkpoint/ckpt.pth')
-            best_acc = acc
+                    test_loss += loss.item()
+                    _, predicted = outputs.max(1)
+                    total += targets.size(0)
+                    correct += predicted.eq(targets).sum().item()
 
-    for epoch in range(start_epoch, start_epoch+200):
-        train(epoch)
-        test(epoch)
-        scheduler.step()
+                    progress_bar(batch_idx, len(valloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                                 % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+
+            # Save checkpoint.
+            acc = 100.*correct/total
+            if acc > best_acc:
+                Logger("Saving...")
+                # print('Saving..')
+                state = {
+                    'net': net.state_dict(),
+                    'acc': acc,
+                    'epoch': epoch,
+                }
+
+                torch.save(state, args.outputfolder)
+                best_acc = acc
+
+        for epoch in range(start_epoch, start_epoch+EPOCHS):
+            train(epoch)
+            test(epoch)
+            scheduler.step()
