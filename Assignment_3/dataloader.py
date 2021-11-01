@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from PIL import Image
+import torchvision
 from tqdm import tqdm
 
 
@@ -98,14 +99,15 @@ if __name__ == "__main__":
 
 
     from yoga_model import model1
-    model = model1().cuda()
+    # model = model1().cuda()
+    model = torchvision.models.densenet201(pretrained=True).cuda()
 
     import pdb;pdb.set_trace()
     trainset = YogaDataset("train",transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=32, shuffle=True, num_workers=8)
+        trainset, batch_size=8, shuffle=True, num_workers=8)
 
-    for (imgs, labels) in tqdm(trainloader):
+    for (imgs, labels, _) in tqdm(trainloader):
         # print(imgs.shape)
         out = model(imgs.cuda())
         print(out.shape)

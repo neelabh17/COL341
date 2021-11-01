@@ -15,7 +15,7 @@ import argparse
 from PIL import Image
 from tqdm import tqdm
 
-TRAIN = True
+TRAIN = False
 
 class_list = ['Virabhadrasana', 'Vrikshasana', 'Utkatasana', 'Padahastasana',
               'Katichakrasana', 'TriyakTadasana', 'Gorakshasana', 'Tadasana',
@@ -43,7 +43,7 @@ class model1(nn.Module):
         Logger("Loaded Yoga Model 1")
         # print("INFO: Loaded Yoga Model 1")
 
-        self.baseline = models.resnet50(pretrained=True)
+        self.baseline = models.densenet201(pretrained=True)
 
         self.extra_fc1 = nn.Linear(1000, 512)
         self.extra_fc2 = nn.Linear(512, 128)
@@ -181,11 +181,11 @@ if __name__ == "__main__":
     if TRAIN:
         trainset = YogaDataset(args.traininput, "train", transform_train)
         trainloader = torch.utils.data.DataLoader(
-            trainset, batch_size=64, shuffle=True, num_workers=8)
+            trainset, batch_size=8, shuffle=True, num_workers=8)
 
         valset = YogaDataset(args.traininput, "val", transform_val)
         valloader = torch.utils.data.DataLoader(
-            valset, batch_size=64, shuffle=True, num_workers=8)
+            valset, batch_size=8, shuffle=True, num_workers=8)
     else:
         testset = YogaDataset(args.testinput, "test", transform_train)
         testloader = torch.utils.data.DataLoader(

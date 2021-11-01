@@ -3,3 +3,4 @@ __pycache__/
 checkpoint/
 test.csv
 checkpoint-submit/
+*pth

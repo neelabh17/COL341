@@ -15,7 +15,7 @@ import argparse
 from PIL import Image
 from tqdm import tqdm
 
-TRAIN = True
+TRAIN = False
 
 class_list = ['Virabhadrasana', 'Vrikshasana', 'Utkatasana', 'Padahastasana',
               'Katichakrasana', 'TriyakTadasana', 'Gorakshasana', 'Tadasana',
