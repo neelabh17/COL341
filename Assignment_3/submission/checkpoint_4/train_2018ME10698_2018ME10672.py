@@ -229,7 +229,7 @@ if __name__ == "__main__":
         df.to_csv(args.testoutput, index=False)
 
     else:
-        EPOCHS = 12
+        EPOCHS = 23
         Logger("Building Model")
         # print('==> Building model..')
 
