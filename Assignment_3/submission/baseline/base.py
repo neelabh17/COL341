@@ -31,6 +31,50 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
+MODELS = {
+    "MODEL_1": 'model_1'
+}
+
+CONFIG = {
+    MODELS.MODEL_1: {
+        "verbose": "Proper Readable Model Name",
+        "TRAIN": True,
+        "DEVELOPMENT": True,
+        "NUM_WORKERS": 8,
+        "TRAIN_PARAMS": {
+            "BATCH_SIZE": 64,
+            "SHUFFLE": True,
+            "EPOCHS": 25,
+            "LEARNING_RATE": 0.01,
+            "MOMENTUM": 0.9,
+            "WEIGHT_DECAY": (5e-4),
+            "T_MAX": 200,
+            "TRANSFORMATIONS": transforms.Compose([
+                transforms.Resize(224),
+                # transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            ]),
+        },
+        "TEST_PARAMS": {
+            "BATCH_SIZE": 64,
+            "SHUFFLE": True,
+            "TRANSFORMATIONS": transforms.Compose([
+                transforms.Resize(224),
+                # transforms.RandomCrop(32, padding=4),
+                # transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            ])
+        }
+    }
+}
+
+MODEL = MODELS.MODEL_1
+
 
 def Logger(children, prefix='INFO'):
     print(f'[{prefix}] {children}')
@@ -85,8 +129,6 @@ class YogaDataset(Dataset):
             Logger("Wrong mode selected")
             # print("INFO: Wrong mode selected")
 
-        # TODO: FIX THE DATA_DIR THINGY
-        # self.data_dir should be the folder location of the train.csv
         self.data_dir = os.path.dirname(self.csv_path)
 
         self.data = pd.read_csv(self.csv_path)
@@ -113,7 +155,8 @@ class YogaDataset(Dataset):
         # print("INFO: Data loaded")
 
     def __getitem__(self, index):
-        img = Image.open(os.path.join(self.data_dir, self.image_loc[index]))
+        img = Image.open(os.path.join(
+            self.data_dir, self.image_loc[index][2:]))
         # Transform image to tensor
         if self.transforms is not None:
             img = self.transforms(img)
@@ -155,7 +198,8 @@ if __name__ == "__main__":
         # transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        transforms.Normalize((0.4914, 0.4822, 0.4465),
+                             (0.2023, 0.1994, 0.2010)),
     ])
 
     transform_val = transforms.Compose([
@@ -163,7 +207,8 @@ if __name__ == "__main__":
         # transforms.RandomCrop(32, padding=4),
         # transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        transforms.Normalize((0.4914, 0.4822, 0.4465),
+                             (0.2023, 0.1994, 0.2010)),
     ])
 
     transform_test = transforms.Compose([
@@ -171,7 +216,8 @@ if __name__ == "__main__":
         # transforms.RandomCrop(32, padding=4),
         # transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        transforms.Normalize((0.4914, 0.4822, 0.4465),
+                             (0.2023, 0.1994, 0.2010)),
     ])
 
     trainloader = None
@@ -262,8 +308,7 @@ if __name__ == "__main__":
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
                 pbar.set_postfix_str('Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
+                                     % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
         def test(epoch):
             global best_acc
@@ -284,7 +329,7 @@ if __name__ == "__main__":
                     correct += predicted.eq(targets).sum().item()
 
                     pbar.set_postfix_str('Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                                % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
             # Save checkpoint.
             acc = 100.*correct/total
@@ -296,7 +341,7 @@ if __name__ == "__main__":
                     'acc': acc,
                     'epoch': epoch,
                 }
-
+                # .pth
                 torch.save(state, args.trainoutput)
                 best_acc = acc
 
