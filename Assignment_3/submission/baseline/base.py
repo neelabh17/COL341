@@ -16,6 +16,10 @@ from PIL import Image
 from tqdm import tqdm
 
 TRAIN = True
+IN_KAGGLE = True
+
+
+NEELARYA_MODEL_NAME = "model_2018ME10698_2018ME0672.pth"
 
 class_list = ['Virabhadrasana', 'Vrikshasana', 'Utkatasana', 'Padahastasana',
               'Katichakrasana', 'TriyakTadasana', 'Gorakshasana', 'Tadasana',
@@ -38,11 +42,11 @@ MODELS = {
 MODEL = MODELS["MODEL_1"]
 
 CONFIG = {
-    [MODELS.MODEL_1]: {
+    MODELS["MODEL_1"]: {
         "verbose": "Proper Readable Model Name",
         "TRAIN": True,
         "DEVELOPMENT": True,
-        "NUM_WORKERS": 8,
+        "NUM_WORKERS": 4 if IN_KAGGLE else 8,
         "TRAIN_PARAMS": {
             "BATCH_SIZE": 8,
             "SHUFFLE": True,
@@ -184,23 +188,39 @@ class YogaDataset(Dataset):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=f'| {"Training" if TRAIN else "Testing"} | COL341 | Aryan Gupta | Neelabh Madan |')
 
-    if TRAIN:
-        parser.add_argument('--traininput', '-tf', default='.',
-                            help='Path to training file')
-        parser.add_argument('--trainoutput', '-of', default='.',
-                            help='Path to save model weights to')
+    args = {}
+
+    if not IN_KAGGLE:
+        parser = argparse.ArgumentParser(
+            description=f'| {"Training" if TRAIN else "Testing"} | COL341 | Aryan Gupta | Neelabh Madan |')
+
+        if TRAIN:
+            parser.add_argument('--traininput', '-tf', default='.',
+                                help='Path to training file')
+            parser.add_argument('--trainoutput', '-of', default='.',
+                                help='Path to save model weights to')
+        else:
+            parser.add_argument('--modelpath', '-mp', default='.',
+                                help='Path to model weights folder')
+            parser.add_argument('--testinput', '-ti', default='.',
+                                help='Path to testfile')
+            parser.add_argument('--testoutput', '-to', default='.',
+                                help='Path to testoutput')
+
+        args = parser.parse_args()
     else:
-        parser.add_argument('--modelpath', '-mp', default='.',
-                            help='Path to model weights folder')
-        parser.add_argument('--testinput', '-ti', default='.',
-                            help='Path to testfile')
-        parser.add_argument('--testoutput', '-to', default='.',
-                            help='Path to testoutput')
-
-    args = parser.parse_args()
+        if TRAIN:
+            args = {
+                "traininput": "/kaggle/input/col341-a3/training.csv",
+                "trainoutput": "/kaggle/working",
+            }
+        else:
+            args = {
+                "modelpath": f"/kaggle/working/{NEELARYA_MODEL_NAME}",
+                "testinput": "/kaggle/input/col341-a3/test.csv",
+                "testoutput": "/kaggle/working/submission.csv",
+            }
 
     Logger("Preparing Data")
     # print('==> Preparing data..')
@@ -216,15 +236,15 @@ if __name__ == "__main__":
     testloader = None
 
     if TRAIN:
-        trainset = YogaDataset(args.traininput, "train", transform_train)
+        trainset = YogaDataset(args["traininput"], "train", transform_train)
         trainloader = torch.utils.data.DataLoader(
             trainset, batch_size=CONFIG[MODEL]['TRAIN_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TRAIN_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
 
-        valset = YogaDataset(args.traininput, "val", transform_val)
+        valset = YogaDataset(args["traininput"], "val", transform_val)
         valloader = torch.utils.data.DataLoader(
             valset, batch_size=CONFIG[MODEL]['VAL_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['VAL_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
     else:
-        testset = YogaDataset(args.testinput, "test", transform_train)
+        testset = YogaDataset(args["testinput"], "test", transform_train)
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=CONFIG[MODEL]['TEST_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TEST_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
 
@@ -234,7 +254,7 @@ if __name__ == "__main__":
     if not TRAIN:
         Logger("Loading Model")
 
-        checkpoint = torch.load(args.modelpath)
+        checkpoint = torch.load(args["modelpath"])
 
         net.load_state_dict(checkpoint['net'])
         best_acc = checkpoint['acc']
@@ -263,7 +283,7 @@ if __name__ == "__main__":
         data = np.concatenate((locs, preds), axis=1)
 
         df = pd.DataFrame(data, columns=["name", "category"])
-        df.to_csv(args.testoutput, index=False)
+        df.to_csv(args["testoutput"], index=False)
 
     else:
         # Training
@@ -336,7 +356,7 @@ if __name__ == "__main__":
                 }
                 # TODO: CONFIRM ABOUT THE SLASH HERE
                 torch.save(
-                    state, f'{args.trainoutput}/model_2018ME10698_2018ME0672.pth')
+                    state, f'{args["trainoutput"]}/{NEELARYA_MODEL_NAME}')
                 best_acc = acc
 
         for epoch in range(start_epoch, start_epoch+EPOCHS):
