@@ -16,7 +16,7 @@ from PIL import Image
 from tqdm import tqdm
 
 TRAIN = True
-IN_KAGGLE = True
+IN_KAGGLE = False
 
 
 NEELARYA_MODEL_NAME = "model_2018ME10698_2018ME0672.pth"
@@ -46,9 +46,9 @@ CONFIG = {
         "verbose": "Proper Readable Model Name",
         "TRAIN": True,
         "DEVELOPMENT": True,
-        "NUM_WORKERS": 4 if IN_KAGGLE else 8,
+        "NUM_WORKERS": 4,
         "TRAIN_PARAMS": {
-            "BATCH_SIZE": 8,
+            "BATCH_SIZE": 16,
             "SHUFFLE": True,
             "EPOCHS": 13,
             "LEARNING_RATE": 0.01,
@@ -65,7 +65,7 @@ CONFIG = {
             ]),
         },
         "VAL_PARAMS": {
-            "BATCH_SIZE": 8,
+            "BATCH_SIZE": 16,
             "SHUFFLE": True,
             "TRANSFORMATIONS": transforms.Compose([
                 transforms.Resize(224),
@@ -103,7 +103,7 @@ class model1(nn.Module):
         Logger("Loaded Yoga Model 1")
         # print("INFO: Loaded Yoga Model 1")
 
-        self.baseline = models.densenet201(pretrained=True)
+        self.baseline = models.densenet161(pretrained=True)
 
         self.extra_fc1 = nn.Linear(1000, 512)
         self.extra_fc2 = nn.Linear(512, 128)
@@ -185,6 +185,7 @@ class YogaDataset(Dataset):
 
     def __len__(self):
         return len(self.labels)
+        # return 8
 
 
 if __name__ == "__main__":
@@ -208,7 +209,18 @@ if __name__ == "__main__":
             parser.add_argument('--testoutput', '-to', default='.',
                                 help='Path to testoutput')
 
-        args = parser.parse_args()
+        args_alias = parser.parse_args()
+        if TRAIN:
+            args = {
+                "traininput": args_alias.traininput ,
+                "trainoutput": args_alias.trainoutput, 
+            }
+        else:
+            args = {
+                "modelpath": args_alias.modelpath, 
+                "testinput": args_alias.testinput ,
+                "testoutput": args_alias.testoutput ,
+            }
     else:
         if TRAIN:
             args = {
@@ -217,7 +229,7 @@ if __name__ == "__main__":
             }
         else:
             args = {
-                "modelpath": f"/kaggle/working/{NEELARYA_MODEL_NAME}",
+                "modelpath": "/kaggle/working",
                 "testinput": "/kaggle/input/col341-a3/test.csv",
                 "testoutput": "/kaggle/working/submission.csv",
             }
@@ -254,7 +266,7 @@ if __name__ == "__main__":
     if not TRAIN:
         Logger("Loading Model")
 
-        checkpoint = torch.load(args["modelpath"])
+        checkpoint = torch.load(os.path.join(args["modelpath"], NEELARYA_MODEL_NAME))
 
         net.load_state_dict(checkpoint['net'])
         best_acc = checkpoint['acc']
@@ -356,7 +368,7 @@ if __name__ == "__main__":
                 }
                 # TODO: CONFIRM ABOUT THE SLASH HERE
                 torch.save(
-                    state, f'{args["trainoutput"]}/{NEELARYA_MODEL_NAME}')
+                    state, os.path.join(args["trainoutput"],NEELARYA_MODEL_NAME))
                 best_acc = acc
 
         for epoch in range(start_epoch, start_epoch+EPOCHS):
