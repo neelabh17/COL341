@@ -44,9 +44,9 @@ CONFIG = {
         "DEVELOPMENT": True,
         "NUM_WORKERS": 8,
         "TRAIN_PARAMS": {
-            "BATCH_SIZE": 64,
+            "BATCH_SIZE": 8,
             "SHUFFLE": True,
-            "EPOCHS": 25,
+            "EPOCHS": 13,
             "LEARNING_RATE": 0.01,
             "MOMENTUM": 0.9,
             "WEIGHT_DECAY": (5e-4),
@@ -61,7 +61,7 @@ CONFIG = {
             ]),
         },
         "VAL_PARAMS": {
-            "BATCH_SIZE": 64,
+            "BATCH_SIZE": 8,
             "SHUFFLE": True,
             "TRANSFORMATIONS": transforms.Compose([
                 transforms.Resize(224),
@@ -99,7 +99,7 @@ class model1(nn.Module):
         Logger("Loaded Yoga Model 1")
         # print("INFO: Loaded Yoga Model 1")
 
-        self.baseline = models.resnet50(pretrained=True)
+        self.baseline = models.densenet201(pretrained=True)
 
         self.extra_fc1 = nn.Linear(1000, 512)
         self.extra_fc2 = nn.Linear(512, 128)
