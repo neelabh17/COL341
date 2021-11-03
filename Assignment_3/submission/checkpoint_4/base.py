@@ -31,6 +31,62 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
+MODELS = {
+    "MODEL_1": 'model_1'
+}
+
+MODEL = MODELS["MODEL_1"]
+
+CONFIG = {
+    [MODELS.MODEL_1]: {
+        "verbose": "Proper Readable Model Name",
+        "TRAIN": True,
+        "DEVELOPMENT": True,
+        "NUM_WORKERS": 8,
+        "TRAIN_PARAMS": {
+            "BATCH_SIZE": 8,
+            "SHUFFLE": True,
+            "EPOCHS": 13,
+            "LEARNING_RATE": 0.01,
+            "MOMENTUM": 0.9,
+            "WEIGHT_DECAY": (5e-4),
+            "T_MAX": 200,
+            "TRANSFORMATIONS": transforms.Compose([
+                transforms.Resize(224),
+                # transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                     (0.2023, 0.1994, 0.2010)),
+            ]),
+        },
+        "VAL_PARAMS": {
+            "BATCH_SIZE": 8,
+            "SHUFFLE": True,
+            "TRANSFORMATIONS": transforms.Compose([
+                transforms.Resize(224),
+                # transforms.RandomCrop(32, padding=4),
+                # transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                     (0.2023, 0.1994, 0.2010)),
+            ])
+        },
+        "TEST_PARAMS": {
+            "BATCH_SIZE": 1,
+            "SHUFFLE": False,
+            "TRANSFORMATIONS": transforms.Compose([
+                transforms.Resize(224),
+                # transforms.RandomCrop(32, padding=4),
+                # transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                     (0.2023, 0.1994, 0.2010)),
+            ])
+        }
+    }
+}
+
 
 def Logger(children, prefix='INFO'):
     print(f'[{prefix}] {children}')
@@ -85,8 +141,6 @@ class YogaDataset(Dataset):
             Logger("Wrong mode selected")
             # print("INFO: Wrong mode selected")
 
-        # TODO: FIX THE DATA_DIR THINGY
-        # self.data_dir should be the folder location of the train.csv
         self.data_dir = os.path.dirname(self.csv_path)
 
         self.data = pd.read_csv(self.csv_path)
@@ -113,7 +167,8 @@ class YogaDataset(Dataset):
         # print("INFO: Data loaded")
 
     def __getitem__(self, index):
-        img = Image.open(os.path.join(self.data_dir, self.image_loc[index]))
+        img = Image.open(os.path.join(
+            self.data_dir, self.image_loc[index][2:]))
         # Transform image to tensor
         if self.transforms is not None:
             img = self.transforms(img)
@@ -150,29 +205,11 @@ if __name__ == "__main__":
     Logger("Preparing Data")
     # print('==> Preparing data..')
 
-    transform_train = transforms.Compose([
-        transforms.Resize(224),
-        # transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
+    transform_train = CONFIG[MODEL]['TRAIN_PARAMS']['TRANSFORMATIONS']
 
-    transform_val = transforms.Compose([
-        transforms.Resize(224),
-        # transforms.RandomCrop(32, padding=4),
-        # transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
+    transform_val = CONFIG[MODEL]['VAL_PARAMS']['TRANSFORMATIONS']
 
-    transform_test = transforms.Compose([
-        transforms.Resize(224),
-        # transforms.RandomCrop(32, padding=4),
-        # transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
+    transform_test = CONFIG[MODEL]['TEST_PARAMS']['TRANSFORMATIONS']
 
     trainloader = None
     valloader = None
@@ -181,15 +218,15 @@ if __name__ == "__main__":
     if TRAIN:
         trainset = YogaDataset(args.traininput, "train", transform_train)
         trainloader = torch.utils.data.DataLoader(
-            trainset, batch_size=8, shuffle=True, num_workers=8)
+            trainset, batch_size=CONFIG[MODEL]['TRAIN_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TRAIN_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
 
         valset = YogaDataset(args.traininput, "val", transform_val)
         valloader = torch.utils.data.DataLoader(
-            valset, batch_size=8, shuffle=True, num_workers=8)
+            valset, batch_size=CONFIG[MODEL]['VAL_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['VAL_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
     else:
         testset = YogaDataset(args.testinput, "test", transform_train)
         testloader = torch.utils.data.DataLoader(
-            testset, batch_size=1, shuffle=False, num_workers=8)
+            testset, batch_size=CONFIG[MODEL]['TEST_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TEST_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
 
     net = model1()
     net = net.to(device)
@@ -229,17 +266,17 @@ if __name__ == "__main__":
         df.to_csv(args.testoutput, index=False)
 
     else:
-        EPOCHS = 25
+        # Training
+
+        EPOCHS = CONFIG[MODEL]['TRAIN_PARAMS']['EPOCHS']
         Logger("Building Model")
         # print('==> Building model..')
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(net.parameters(), lr=0.01,
-                              momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(net.parameters(), lr=CONFIG[MODEL]['TRAIN_PARAMS']['LEARNING_RATE'],
+                              momentum=CONFIG[MODEL]['TRAIN_PARAMS']['MOMENTUM'], weight_decay=CONFIG[MODEL]['TRAIN_PARAMS']['WEIGHT_DECAY'])
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=200)
-
-        # Training
+            optimizer, T_max=CONFIG[MODEL]['TRAIN_PARAMS']['T_MAX'])
 
         def train(epoch):
             Logger('\nEpoch: %d' % epoch)
@@ -262,8 +299,7 @@ if __name__ == "__main__":
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
                 pbar.set_postfix_str('Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
+                                     % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
         def test(epoch):
             global best_acc
@@ -284,11 +320,13 @@ if __name__ == "__main__":
                     correct += predicted.eq(targets).sum().item()
 
                     pbar.set_postfix_str('Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                                % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
             # Save checkpoint.
             acc = 100.*correct/total
-            if acc > best_acc:
+            if True:
+                # We want to save on every iteration
+                # if acc > best_acc:
                 Logger("Saving...")
                 # print('Saving..')
                 state = {
@@ -296,8 +334,9 @@ if __name__ == "__main__":
                     'acc': acc,
                     'epoch': epoch,
                 }
-
-                torch.save(state, args.trainoutput)
+                # TODO: CONFIRM ABOUT THE SLASH HERE
+                torch.save(
+                    state, f'{args.trainoutput}/model_2018ME10698_2018ME0672.pth')
                 best_acc = acc
 
         for epoch in range(start_epoch, start_epoch+EPOCHS):
