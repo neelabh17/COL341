@@ -35,10 +35,8 @@ MODELS = {
     "MODEL_1": 'model_1'
 }
 
-MODEL = MODELS["MODEL_1"]
-
 CONFIG = {
-    [MODELS.MODEL_1]: {
+    MODELS.MODEL_1: {
         "verbose": "Proper Readable Model Name",
         "TRAIN": True,
         "DEVELOPMENT": True,
@@ -56,11 +54,11 @@ CONFIG = {
                 # transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                     (0.2023, 0.1994, 0.2010)),
+                transforms.Normalize(
+                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
             ]),
         },
-        "VAL_PARAMS": {
+        "TEST_PARAMS": {
             "BATCH_SIZE": 64,
             "SHUFFLE": True,
             "TRANSFORMATIONS": transforms.Compose([
@@ -68,24 +66,14 @@ CONFIG = {
                 # transforms.RandomCrop(32, padding=4),
                 # transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                     (0.2023, 0.1994, 0.2010)),
-            ])
-        },
-        "TEST_PARAMS": {
-            "BATCH_SIZE": 1,
-            "SHUFFLE": False,
-            "TRANSFORMATIONS": transforms.Compose([
-                transforms.Resize(224),
-                # transforms.RandomCrop(32, padding=4),
-                # transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                     (0.2023, 0.1994, 0.2010)),
+                transforms.Normalize(
+                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
             ])
         }
     }
 }
+
+MODEL = MODELS.MODEL_1
 
 
 def Logger(children, prefix='INFO'):
@@ -205,11 +193,32 @@ if __name__ == "__main__":
     Logger("Preparing Data")
     # print('==> Preparing data..')
 
-    transform_train = CONFIG[MODEL]['TRAIN_PARAMS']['TRANSFORMATIONS']
+    transform_train = transforms.Compose([
+        transforms.Resize(224),
+        # transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465),
+                             (0.2023, 0.1994, 0.2010)),
+    ])
 
-    transform_val = CONFIG[MODEL]['VAL_PARAMS']['TRANSFORMATIONS']
+    transform_val = transforms.Compose([
+        transforms.Resize(224),
+        # transforms.RandomCrop(32, padding=4),
+        # transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465),
+                             (0.2023, 0.1994, 0.2010)),
+    ])
 
-    transform_test = CONFIG[MODEL]['TEST_PARAMS']['TRANSFORMATIONS']
+    transform_test = transforms.Compose([
+        transforms.Resize(224),
+        # transforms.RandomCrop(32, padding=4),
+        # transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465),
+                             (0.2023, 0.1994, 0.2010)),
+    ])
 
     trainloader = None
     valloader = None
@@ -218,15 +227,15 @@ if __name__ == "__main__":
     if TRAIN:
         trainset = YogaDataset(args.traininput, "train", transform_train)
         trainloader = torch.utils.data.DataLoader(
-            trainset, batch_size=CONFIG[MODEL]['TRAIN_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TRAIN_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
+            trainset, batch_size=64, shuffle=True, num_workers=8)
 
         valset = YogaDataset(args.traininput, "val", transform_val)
         valloader = torch.utils.data.DataLoader(
-            valset, batch_size=CONFIG[MODEL]['VAL_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['VAL_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
+            valset, batch_size=64, shuffle=True, num_workers=8)
     else:
         testset = YogaDataset(args.testinput, "test", transform_train)
         testloader = torch.utils.data.DataLoader(
-            testset, batch_size=CONFIG[MODEL]['TEST_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TEST_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
+            testset, batch_size=1, shuffle=False, num_workers=8)
 
     net = model1()
     net = net.to(device)
@@ -266,17 +275,17 @@ if __name__ == "__main__":
         df.to_csv(args.testoutput, index=False)
 
     else:
-        # Training
-
-        EPOCHS = CONFIG[MODEL]['TRAIN_PARAMS']['EPOCHS']
+        EPOCHS = 25
         Logger("Building Model")
         # print('==> Building model..')
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(net.parameters(), lr=CONFIG[MODEL]['TRAIN_PARAMS']['LEARNING_RATE'],
-                              momentum=CONFIG[MODEL]['TRAIN_PARAMS']['MOMENTUM'], weight_decay=CONFIG[MODEL]['TRAIN_PARAMS']['WEIGHT_DECAY'])
+        optimizer = optim.SGD(net.parameters(), lr=0.01,
+                              momentum=0.9, weight_decay=5e-4)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=CONFIG[MODEL]['TRAIN_PARAMS']['T_MAX'])
+            optimizer, T_max=200)
+
+        # Training
 
         def train(epoch):
             Logger('\nEpoch: %d' % epoch)
@@ -324,9 +333,7 @@ if __name__ == "__main__":
 
             # Save checkpoint.
             acc = 100.*correct/total
-            if True:
-                # We want to save on every iteration
-                # if acc > best_acc:
+            if acc > best_acc:
                 Logger("Saving...")
                 # print('Saving..')
                 state = {
@@ -334,9 +341,8 @@ if __name__ == "__main__":
                     'acc': acc,
                     'epoch': epoch,
                 }
-                # TODO: CONFIRM ABOUT THE SLASH HERE
-                torch.save(
-                    state, f'{args.trainoutput}/model_2018ME10698_2018ME0672.pth')
+                # .pth
+                torch.save(state, args.trainoutput)
                 best_acc = acc
 
         for epoch in range(start_epoch, start_epoch+EPOCHS):
