@@ -52,7 +52,7 @@ CONFIG = {
         "TRAIN_PARAMS": {
             "BATCH_SIZE": 16,
             "SHUFFLE": True,
-            "EPOCHS": 6,
+            "EPOCHS": 12,
             "LEARNING_RATE": 0.001,
             "MOMENTUM": 0.9,
             "WEIGHT_DECAY": (5e-4),
@@ -204,8 +204,8 @@ class YogaDataset(Dataset):
         return (img, label, img_loc)
 
     def __len__(self):
-        # return len(self.labels)
-        return 100
+        return len(self.labels)
+        # return 100
 
 
 if __name__ == "__main__":
