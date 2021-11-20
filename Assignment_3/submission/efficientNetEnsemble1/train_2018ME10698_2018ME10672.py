@@ -98,14 +98,13 @@ def Logger(children, prefix='INFO'):
 
 
 class model1(nn.Module):
-    def __init__(self):
+    def __init__(self, baseline):
         super().__init__()
 
         Logger("Loaded Yoga Model 1")
         # print("INFO: Loaded Yoga Model 1")
 
-
-        self.baseline = EfficientNet.from_pretrained('efficientnet-b3')
+        self.baseline = baseline
 
         self.extra_fc1 = nn.Linear(1000, 512)
         self.extra_fc2 = nn.Linear(512, 128)
@@ -121,6 +120,24 @@ class model1(nn.Module):
         X = self.extra_fc3(X)
 
         return X
+
+
+ENSEMBLE_MODELS = ['E1', 'E2', 'E3']
+
+ENSEMBLE_CONFIG = {
+    'E1': {
+        "MODEL": model1,
+        'BASELINE': EfficientNet.from_pretrained('efficientnet-b2'),
+    },
+    'E2': {
+        "MODEL": model1,
+        'BASELINE': EfficientNet.from_pretrained('efficientnet-b3'),
+    },
+    'E3': {
+        "MODEL": model1,
+        'BASELINE': EfficientNet.from_pretrained('efficientnet-b4'),
+    }
+}
 
 
 # Taken from https://github.com/utkuozbulak/pytorch-custom-dataset-examples
@@ -214,14 +231,14 @@ if __name__ == "__main__":
         args_alias = parser.parse_args()
         if TRAIN:
             args = {
-                "traininput": args_alias.traininput ,
-                "trainoutput": args_alias.trainoutput, 
+                "traininput": args_alias.traininput,
+                "trainoutput": args_alias.trainoutput,
             }
         else:
             args = {
-                "modelpath": args_alias.modelpath, 
-                "testinput": args_alias.testinput ,
-                "testoutput": args_alias.testoutput ,
+                "modelpath": args_alias.modelpath,
+                "testinput": args_alias.testinput,
+                "testoutput": args_alias.testoutput,
             }
     else:
         if TRAIN:
@@ -262,46 +279,69 @@ if __name__ == "__main__":
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=CONFIG[MODEL]['TEST_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TEST_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
 
-    net = model1()
-    net = net.to(device)
+    # net = model1()
+    # net = net.to(device)
 
     if not TRAIN:
-        Logger("Loading Model")
+        LOADED_MODELS = {}
 
-        checkpoint = torch.load(os.path.join(args["modelpath"], NEELARYA_MODEL_NAME))
+        def load_models():
+            Logger("Loading Model")
+            for emodel in ENSEMBLE_MODELS:
+                checkpoint = torch.load(os.path.join(
+                args["modelpath"], f"{emodel}_{NEELARYA_MODEL_NAME}"))
+                net = ENSEMBLE_CONFIG[emodel]['MODEL'](
+                ENSEMBLE_CONFIG[emodel]['BASELINE'])
+                net.to(device)
+                net.load_state_dict(checkpoint['net'])
 
-        net.load_state_dict(checkpoint['net'])
-        best_acc = checkpoint['acc']
-        start_epoch = checkpoint['epoch']
+                LOADED_MODELS[emodel] = net
+                # best_acc = checkpoint['acc']
+                # start_epoch = checkpoint['epoch']
 
-        Logger("Beginning test")
+        def test():
+            Logger("Beginning test")
+            for emodel in LOADED_MODELS:
+                LOADED_MODELS[emodel].eval()
 
-        net.eval()
-        locs = np.array([]).reshape(-1,1)
-        preds = np.array([]).reshape(-1,1)
-        with torch.no_grad():
-            for batch_idx, (inputs, _, img_loc) in enumerate(tqdm(testloader)):
-                out = net(inputs.to(device))
-                out = out.argmax(dim=1)
-                out = out.squeeze(0)
-                
-                img_loc_new = np.array(img_loc).reshape(-1,1)
+            locs = np.array([]).reshape(-1, 1)
+            preds = np.array([]).reshape(-1, 1)
 
-                locs = np.concatenate((locs, img_loc_new), axis = 0)
-                preds = np.concatenate((preds, out.cpu().numpy().reshape(-1, 1)), axis = 0)
+            with torch.no_grad():
+                for batch_idx, (inputs, _, img_loc) in enumerate(tqdm(testloader)):
+                    
+                    out_store = torch.tensor([]).reshape(inputs.shape[0], -1)
+                    for emodel in LOADED_MODELS:
+                        out = LOADED_MODELS(emodel)(inputs.to(device))
+                        out = out.argmax(dim=1)
+                        out = out.squeeze(0)
+                        out_store = torch.cat((out_store, out.reshape(-1, 1)), dim = 1)
 
-        final_preds = []
-        for i in range(preds.shape[0]):
-            final_preds.append(class_list[int(preds[i,:])])
-        preds = final_preds
-        locs = locs[:-1, :]
-        preds = preds[:-1]
+                    out_store = out_store.cpu().numpy()
+                    
+                    out_store_vals, out_store_counts = np.unique(out_store, return_index=True, axis=1)
 
-        preds = np.array(preds).reshape(-1, 1)
-        data = np.concatenate((locs, preds), axis=1)
+                    pred_store = np.array((inputs.shape[0], 1))
+                    pred_store = out_store_vals[np.argmax(out_store_counts)]
 
-        df = pd.DataFrame(data, columns=["name", "category"])
-        df.to_csv(args["testoutput"], index=False)
+                    img_loc_new = np.array(img_loc).reshape(-1, 1)
+
+                    locs = np.concatenate((locs, img_loc_new), axis=0)
+                    preds = np.concatenate(
+                        (preds, pred_store.reshape(-1, 1)), axis=0)
+
+            final_preds = []
+            for i in range(preds.shape[0]):
+                final_preds.append(class_list[int(preds[i, :])])
+            preds = final_preds
+            locs = locs[:-1, :]
+            preds = preds[:-1]
+
+            preds = np.array(preds).reshape(-1, 1)
+            data = np.concatenate((locs, preds), axis=1)
+
+            df = pd.DataFrame(data, columns=["name", "category"])
+            df.to_csv(args["testoutput"], index=False)
 
     else:
         # Training
@@ -310,13 +350,7 @@ if __name__ == "__main__":
         Logger("Building Model")
         # print('==> Building model..')
 
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(net.parameters(), lr=CONFIG[MODEL]['TRAIN_PARAMS']['LEARNING_RATE'],
-                              momentum=CONFIG[MODEL]['TRAIN_PARAMS']['MOMENTUM'], weight_decay=CONFIG[MODEL]['TRAIN_PARAMS']['WEIGHT_DECAY'])
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=CONFIG[MODEL]['TRAIN_PARAMS']['T_MAX'])
-
-        def train(epoch):
+        def train(epoch, net, criterion, optimizer, scheduler):
             Logger('\nEpoch: %d' % epoch)
             # print('\nEpoch: %d' % epoch)
             net.train()
@@ -339,7 +373,7 @@ if __name__ == "__main__":
                 pbar.set_postfix_str('Loss: %.3f | Acc: %.3f%% (%d/%d)'
                                      % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
-        def test(epoch):
+        def test(epoch, net, criterion, save_prefix='DEFAULT'):
             global best_acc
             net.eval()
             test_loss = 0
@@ -372,16 +406,28 @@ if __name__ == "__main__":
                     'acc': acc,
                     'epoch': epoch,
                 }
-                # TODO: CONFIRM ABOUT THE SLASH HERE
                 torch.save(
-                    state, os.path.join(args["trainoutput"],NEELARYA_MODEL_NAME))
-                best_acc = acc
-                
+                    state, os.path.join(args["trainoutput"], f"{save_prefix}_{NEELARYA_MODEL_NAME}"))
+
                 torch.save(
-                    state, os.path.join(args["trainoutput"], str(epoch) + "_" + NEELARYA_MODEL_NAME))
+                    state, os.path.join(args["trainoutput"], f"{save_prefix}_{str(epoch)}_{NEELARYA_MODEL_NAME}"))
+
                 best_acc = acc
 
-        for epoch in range(start_epoch, start_epoch+EPOCHS):
-            train(epoch)
-            test(epoch)
-            scheduler.step()
+        for emodel in ENSEMBLE_MODELS:
+            net = ENSEMBLE_CONFIG[emodel]['MODEL'](
+                ENSEMBLE_CONFIG[emodel]['BASELINE'])
+            net.to(device)
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.SGD(net.parameters(), lr=CONFIG[MODEL]['TRAIN_PARAMS']['LEARNING_RATE'],
+                                  momentum=CONFIG[MODEL]['TRAIN_PARAMS']['MOMENTUM'], weight_decay=CONFIG[MODEL]['TRAIN_PARAMS']['WEIGHT_DECAY'])
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=CONFIG[MODEL]['TRAIN_PARAMS']['T_MAX'])
+
+            for epoch in range(start_epoch, start_epoch+EPOCHS):
+                train(epoch, net, criterion, optimizer, scheduler)
+                test(epoch, net, criterion, emodel)
+                scheduler.step()
+
+            del net
+            torch.cuda.empty_cache()
