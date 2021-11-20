@@ -207,8 +207,8 @@ class YogaDataset(Dataset):
         return (img, label, img_loc)
 
     def __len__(self):
-        # return len(self.labels)
-        return 50
+        return len(self.labels)
+        # return 50
 
 
 if __name__ == "__main__":
