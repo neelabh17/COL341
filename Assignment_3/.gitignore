@@ -4,3 +4,4 @@ checkpoint/
 test.csv
 checkpoint-submit/
 *pth
+*.csv
