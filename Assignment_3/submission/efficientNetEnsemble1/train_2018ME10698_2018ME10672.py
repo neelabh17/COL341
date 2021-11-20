@@ -9,12 +9,13 @@ from efficientnet_pytorch import EfficientNet
 import os
 import sys
 import time
+import argparse
 import numpy as np
 import pandas as pd
-import argparse
 
 from PIL import Image
 from tqdm import tqdm
+from scipy import stats
 
 TRAIN = True
 IN_KAGGLE = False
@@ -49,7 +50,7 @@ CONFIG = {
         "DEVELOPMENT": True,
         "NUM_WORKERS": 4,
         "TRAIN_PARAMS": {
-            "BATCH_SIZE": 32,
+            "BATCH_SIZE": 16,
             "SHUFFLE": True,
             "EPOCHS": 6,
             "LEARNING_RATE": 0.001,
@@ -66,7 +67,7 @@ CONFIG = {
             ]),
         },
         "VAL_PARAMS": {
-            "BATCH_SIZE": 32,
+            "BATCH_SIZE": 16,
             "SHUFFLE": True,
             "TRANSFORMATIONS": transforms.Compose([
                 transforms.Resize(224),
@@ -78,7 +79,7 @@ CONFIG = {
             ])
         },
         "TEST_PARAMS": {
-            "BATCH_SIZE": 32,
+            "BATCH_SIZE": 16,
             "SHUFFLE": False,
             "TRANSFORMATIONS": transforms.Compose([
                 transforms.Resize(224),
@@ -203,8 +204,8 @@ class YogaDataset(Dataset):
         return (img, label, img_loc)
 
     def __len__(self):
-        return len(self.labels)
-        # return 100
+        # return len(self.labels)
+        return 100
 
 
 if __name__ == "__main__":
@@ -310,25 +311,22 @@ if __name__ == "__main__":
             with torch.no_grad():
                 for batch_idx, (inputs, _, img_loc) in enumerate(tqdm(testloader)):
                     
-                    out_store = torch.tensor([]).reshape(inputs.shape[0], -1)
+                    out_store = torch.tensor([]).reshape(inputs.shape[0], -1).to(device)
                     for emodel in LOADED_MODELS:
-                        out = LOADED_MODELS(emodel)(inputs.to(device))
+                        out = LOADED_MODELS[emodel](inputs.to(device))
                         out = out.argmax(dim=1)
                         out = out.squeeze(0)
                         out_store = torch.cat((out_store, out.reshape(-1, 1)), dim = 1)
 
                     out_store = out_store.cpu().numpy()
                     
-                    out_store_vals, out_store_counts = np.unique(out_store, return_index=True, axis=1)
-
-                    pred_store = np.array((inputs.shape[0], 1))
-                    pred_store = out_store_vals[np.argmax(out_store_counts)]
+                    pred_store = stats.mode(out_store, axis = 1)[0]
 
                     img_loc_new = np.array(img_loc).reshape(-1, 1)
 
                     locs = np.concatenate((locs, img_loc_new), axis=0)
                     preds = np.concatenate(
-                        (preds, pred_store.reshape(-1, 1)), axis=0)
+                        (preds,pred_store), axis=0)
 
             final_preds = []
             for i in range(preds.shape[0]):
@@ -342,6 +340,9 @@ if __name__ == "__main__":
 
             df = pd.DataFrame(data, columns=["name", "category"])
             df.to_csv(args["testoutput"], index=False)
+
+        load_models()
+        test()
 
     else:
         # Training
@@ -415,6 +416,7 @@ if __name__ == "__main__":
                 best_acc = acc
 
         for emodel in ENSEMBLE_MODELS:
+            Logger(f"Training {emodel}")
             net = ENSEMBLE_CONFIG[emodel]['MODEL'](
                 ENSEMBLE_CONFIG[emodel]['BASELINE'])
             net.to(device)
