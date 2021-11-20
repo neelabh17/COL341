@@ -5,13 +5,13 @@ from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 import torch.optim as optim
 from efficientnet_pytorch import EfficientNet
-
 import os
 import sys
 import time
 import argparse
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from PIL import Image
 from tqdm import tqdm
@@ -95,6 +95,9 @@ CONFIG = {
 
 
 def Logger(children, prefix='INFO'):
+    with open("logs.txt", "a") as f:
+        f.write(f'[{prefix}] {children}')
+        f.write("\n")
     print(f'[{prefix}] {children}')
 
 
@@ -204,11 +207,13 @@ class YogaDataset(Dataset):
         return (img, label, img_loc)
 
     def __len__(self):
-        return len(self.labels)
-        # return 100
+        # return len(self.labels)
+        return 50
 
 
 if __name__ == "__main__":
+    Logger(f"\n\n\n#######################################################")
+    Logger(f"Starting New {'Training' if TRAIN else 'TESTING'} at {datetime.now().ctime()}")
 
     args = {}
 
@@ -352,7 +357,7 @@ if __name__ == "__main__":
         # print('==> Building model..')
 
         def train(epoch, net, criterion, optimizer, scheduler):
-            Logger('\nEpoch: %d' % epoch)
+            Logger('Epoch: %d' % epoch)
             # print('\nEpoch: %d' % epoch)
             net.train()
             train_loss = 0
@@ -407,6 +412,7 @@ if __name__ == "__main__":
                     'acc': acc,
                     'epoch': epoch,
                 }
+                Logger(f"EPOCH = {epoch} \t ACC = {acc} \t LOSS = {test_loss/len(pbar)}")
                 torch.save(
                     state, os.path.join(args["trainoutput"], f"{save_prefix}_{NEELARYA_MODEL_NAME}"))
 

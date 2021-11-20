@@ -5,3 +5,4 @@ test.csv
 checkpoint-submit/
 *pth
 *.csv
+logs.txt
