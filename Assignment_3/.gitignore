@@ -6,3 +6,4 @@ checkpoint-submit/
 *pth
 *.csv
 logs.txt
+*.zip

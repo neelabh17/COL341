@@ -48,11 +48,11 @@ CONFIG = {
         "verbose": "Proper Readable Model Name",
         "TRAIN": True,
         "DEVELOPMENT": True,
-        "NUM_WORKERS": 4,
+        "NUM_WORKERS": 2,
         "TRAIN_PARAMS": {
             "BATCH_SIZE": 16,
             "SHUFFLE": True,
-            "EPOCHS": 12,
+            "EPOCHS": 4,
             "LEARNING_RATE": 0.001,
             "MOMENTUM": 0.9,
             "WEIGHT_DECAY": (5e-4),
@@ -293,8 +293,6 @@ if __name__ == "__main__":
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=CONFIG[MODEL]['TEST_PARAMS']['BATCH_SIZE'], shuffle=CONFIG[MODEL]['TEST_PARAMS']['SHUFFLE'], num_workers=CONFIG[MODEL]['NUM_WORKERS'])
 
-    # net = model1()
-    # net = net.to(device)
 
     if not TRAIN:
         LOADED_MODELS = {}
@@ -305,7 +303,7 @@ if __name__ == "__main__":
 
             for emodel in ENSEMBLE_MODELS:
                 checkpoint = torch.load(os.path.join(
-                args["modelpath"], f"{emodel}_3_{NEELARYA_MODEL_NAME}"))
+                args["modelpath"], f"{emodel}_{NEELARYA_MODEL_NAME}"))
     
             
                 # if(emodel =="E5" or emodel =="E6"):
